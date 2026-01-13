@@ -1,11 +1,66 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { Sidebar } from '@/components/dashboard/Sidebar';
+import { Header } from '@/components/dashboard/Header';
+import { OverviewView } from '@/components/dashboard/views/OverviewView';
+import { ServicesView } from '@/components/dashboard/views/ServicesView';
+import { FinancialView } from '@/components/dashboard/views/FinancialView';
+import { CustomersView } from '@/components/dashboard/views/CustomersView';
+import { FunnelView } from '@/components/dashboard/views/FunnelView';
+import { ProcessesView } from '@/components/dashboard/views/ProcessesView';
+import { PeopleView } from '@/components/dashboard/views/PeopleView';
+import { ESGView } from '@/components/dashboard/views/ESGView';
+
+type TabType = 'overview' | 'services' | 'financial' | 'customers' | 'funnel' | 'processes' | 'people' | 'esg';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const renderView = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <OverviewView />;
+      case 'services':
+        return <ServicesView />;
+      case 'financial':
+        return <FinancialView />;
+      case 'customers':
+        return <CustomersView />;
+      case 'funnel':
+        return <FunnelView />;
+      case 'processes':
+        return <ProcessesView />;
+      case 'people':
+        return <PeopleView />;
+      case 'esg':
+        return <ESGView />;
+      default:
+        return <OverviewView />;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background flex">
+      <Sidebar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+      
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          {renderView()}
+        </main>
+        
+        <footer className="px-4 lg:px-6 py-3 border-t border-border bg-card/50">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>© 2026 CDL Goiânia - Painel de Gestão à Vista</span>
+            <span>Última atualização: {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        </footer>
       </div>
     </div>
   );
