@@ -1,16 +1,18 @@
 import { ServiceTable } from '../ServiceTable';
 import { RevenueChart } from '../RevenueChart';
-import { servicesData, revenueEvolution } from '@/data/dashboardData';
+import { revenueEvolution } from '@/data/dashboardData';
+import { useDashboard } from '@/contexts/DashboardContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '@/data/dashboardData';
 
-const serviceComparison = servicesData.slice(0, 6).map(s => ({
-  name: s.name.length > 15 ? s.name.substring(0, 12) + '...' : s.name,
-  realizado: s.revenue,
-  meta: s.revenueTarget,
-}));
-
 export function ServicesView() {
+  const { services } = useDashboard();
+
+  const serviceComparison = services.slice(0, 6).map(s => ({
+    name: s.name.length > 15 ? s.name.substring(0, 12) + '...' : s.name,
+    realizado: s.revenue,
+    meta: s.revenueTarget,
+  }));
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -72,11 +74,11 @@ export function ServicesView() {
       </div>
 
       {/* Service Table */}
-      <ServiceTable services={servicesData} />
+      <ServiceTable services={services} />
 
       {/* Service Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {servicesData.slice(0, 6).map((service, index) => (
+        {services.slice(0, 6).map((service, index) => (
           <div 
             key={service.id} 
             className="dashboard-card p-4 animate-fade-in"

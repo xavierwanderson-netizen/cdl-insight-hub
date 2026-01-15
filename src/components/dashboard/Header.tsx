@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Menu, Bell, Settings, ChevronDown, Calendar, Filter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,14 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const [period, setPeriod] = useState('2026');
-  const [month, setMonth] = useState('all');
+  const { year, setYear, month, setMonth } = useDashboard();
 
   return (
     <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
@@ -31,7 +30,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </Button>
           
           <div className="hidden md:flex items-center gap-3">
-            <Select value={period} onValueChange={setPeriod}>
+            <Select value={year} onValueChange={setYear}>
               <SelectTrigger className="w-28 h-9">
                 <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                 <SelectValue placeholder="Ano" />
@@ -42,7 +41,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               </SelectContent>
             </Select>
             
-            <Select value={month} onValueChange={setMonth}>
+            <Select value={month} onValueChange={(value) => setMonth(value as any)}>
               <SelectTrigger className="w-32 h-9">
                 <SelectValue placeholder="Mês" />
               </SelectTrigger>
