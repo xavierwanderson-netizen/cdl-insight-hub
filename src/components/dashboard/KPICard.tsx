@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import type { KPIData } from '@/data/dashboardData';
-import { formatCurrency, formatNumber } from '@/data/dashboardData';
+import { formatCurrency } from '@/data/dashboardData';
+import { formatNumber } from '@/data/utils';
 import {
   Tooltip,
   TooltipContent,

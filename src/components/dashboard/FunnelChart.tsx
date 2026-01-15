@@ -1,5 +1,5 @@
 import type { FunnelStage } from '@/data/dashboardData';
-import { formatNumber } from '@/data/dashboardData';
+import { formatNumber } from '@/data/utils';
 
 interface FunnelChartProps {
   data: FunnelStage[];
