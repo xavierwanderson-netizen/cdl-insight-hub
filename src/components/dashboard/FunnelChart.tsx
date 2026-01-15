@@ -17,7 +17,7 @@ export function FunnelChart({ data }: FunnelChartProps) {
           const widthPercent = 100 - (index * 15);
           
           return (
-            <div key={stage.name} className="relative">
+            <div key={stage.stage} className="relative">
               <div
                 className="relative h-14 rounded-lg flex items-center justify-between px-4 transition-all hover:scale-[1.02]"
                 style={{ 
@@ -27,7 +27,7 @@ export function FunnelChart({ data }: FunnelChartProps) {
                   marginRight: 'auto',
                 }}
               >
-                <span className="text-white font-medium text-sm">{stage.name}</span>
+                <span className="text-white font-medium text-sm">{stage.stage}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-white font-bold">{formatNumber(stage.value)}</span>
                   <span className="text-white/70 text-sm">({stage.percentage}%)</span>
