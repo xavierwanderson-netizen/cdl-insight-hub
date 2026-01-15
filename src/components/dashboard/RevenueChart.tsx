@@ -1,8 +1,8 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ComposedChart, Area } from 'recharts';
-import { formatCurrency } from '@/data/dashboardData';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from 'recharts';
+import { formatCurrency, type RevenueEvolutionData } from '@/data/dashboardData';
 
 interface RevenueChartProps {
-  data: { month: string; target: number; realized: number }[];
+  data: RevenueEvolutionData[];
 }
 
 export function RevenueChart({ data }: RevenueChartProps) {
@@ -13,11 +13,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-chart-1" />
-            <span className="text-muted-foreground">Meta</span>
+            <span className="text-muted-foreground">Meta 2026</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-chart-2" />
-            <span className="text-muted-foreground">Realizado</span>
+            <span className="text-muted-foreground">Realizado 2025</span>
           </div>
         </div>
       </div>
@@ -47,21 +47,21 @@ export function RevenueChart({ data }: RevenueChartProps) {
               labelStyle={{ fontWeight: 600 }}
             />
             <Bar 
-              dataKey="target" 
-              name="Meta"
+              dataKey="meta2026" 
+              name="Meta 2026"
               fill="hsl(var(--chart-1))"
               radius={[4, 4, 0, 0]}
               opacity={0.3}
             />
             <Bar 
-              dataKey="realized" 
-              name="Realizado"
+              dataKey="realizado2025" 
+              name="Realizado 2025"
               fill="hsl(var(--chart-2))"
               radius={[4, 4, 0, 0]}
             />
             <Line 
               type="monotone" 
-              dataKey="target" 
+              dataKey="meta2026" 
               stroke="hsl(var(--chart-1))"
               strokeWidth={2}
               dot={false}

@@ -1,4 +1,4 @@
-import { ChevronRight, User } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { OKRData, StatusType } from '@/data/dashboardData';
 
 interface OKRCardProps {
@@ -54,11 +54,7 @@ export function OKRCard({ data, delay = 0 }: OKRCardProps) {
             
             <ProgressBar progress={kr.progress} status={kr.status} />
             
-            <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <User className="w-3 h-3" />
-                <span>{kr.responsible}</span>
-              </div>
+            <div className="flex items-center justify-end mt-2">
               <span className="text-xs font-medium text-muted-foreground">
                 {kr.progress}%
               </span>
