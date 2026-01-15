@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Header } from '@/components/dashboard/Header';
-import { OverviewView } from '@/components/dashboard/views/OverviewView';
-import { ServicesView } from '@/components/dashboard/views/ServicesView';
-import { FinancialView } from '@/components/dashboard/views/FinancialView';
-import { CustomersView } from '@/components/dashboard/views/CustomersView';
-import { FunnelView } from '@/components/dashboard/views/FunnelView';
-import { ProcessesView } from '@/components/dashboard/views/ProcessesView';
-import { PeopleView } from '@/components/dashboard/views/PeopleView';
-import { ESGView } from '@/components/dashboard/views/ESGView';
+
+const OverviewView = lazy(() => import('@/components/dashboard/views/OverviewView').then(m => ({ default: m.OverviewView })));
+const ServicesView = lazy(() => import('@/components/dashboard/views/ServicesView').then(m => ({ default: m.ServicesView })));
+const FinancialView = lazy(() => import('@/components/dashboard/views/FinancialView').then(m => ({ default: m.FinancialView })));
+const CustomersView = lazy(() => import('@/components/dashboard/views/CustomersView').then(m => ({ default: m.CustomersView })));
+const FunnelView = lazy(() => import('@/components/dashboard/views/FunnelView').then(m => ({ default: m.FunnelView })));
+const ProcessesView = lazy(() => import('@/components/dashboard/views/ProcessesView').then(m => ({ default: m.ProcessesView })));
+const PeopleView = lazy(() => import('@/components/dashboard/views/PeopleView').then(m => ({ default: m.PeopleView })));
+const ESGView = lazy(() => import('@/components/dashboard/views/ESGView').then(m => ({ default: m.ESGView })));
 
 type TabType = 'overview' | 'services' | 'financial' | 'customers' | 'funnel' | 'processes' | 'people' | 'esg';
 
@@ -52,7 +53,9 @@ const Index = () => {
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
-          {renderView()}
+          <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">Carregando...</div>}>
+            {renderView()}
+          </Suspense>
         </main>
         
         <footer className="px-4 lg:px-6 py-3 border-t border-border bg-card/50">
