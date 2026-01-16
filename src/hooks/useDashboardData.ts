@@ -34,15 +34,15 @@ export function useSheetData(sheetId: string, gid: number = 0) {
 // Hook para buscar dados de serviços
 export function useServicesData(year: '2025' | '2026') {
   const query2025 = useQuery({
-    queryKey: ['sheet', SHEET_IDS.PROJECAO_2025],
-    queryFn: () => fetchSheetData(SHEET_IDS.PROJECAO_2025),
+    queryKey: ['sheet', SHEET_IDS.SERVICOS_2025_2026],
+    queryFn: () => fetchSheetData(SHEET_IDS.SERVICOS_2025_2026),
     staleTime: STALE_TIME,
     ...RETRY_CONFIG,
   });
 
   const query2026 = useQuery({
-    queryKey: ['sheet', SHEET_IDS.PROJECAO_2026],
-    queryFn: () => fetchSheetData(SHEET_IDS.PROJECAO_2026),
+    queryKey: ['sheet', SHEET_IDS.SERVICOS_2025_2026],
+    queryFn: () => fetchSheetData(SHEET_IDS.SERVICOS_2025_2026),
     staleTime: STALE_TIME,
     ...RETRY_CONFIG,
   });
@@ -72,7 +72,7 @@ export function useFinancialData() {
     queryFn: async (): Promise<FinancialData> => {
       // Try to fetch from sheet, fallback to parsed data
       try {
-        await fetchSheetData(SHEET_IDS.PROJECAO_2025);
+        await fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
         return parseFinancialData();
       } catch {
         return parseFinancialData();
@@ -95,7 +95,7 @@ export function useRevenueEvolution() {
     queryKey: ['revenue-evolution'],
     queryFn: async (): Promise<RevenueEvolutionData[]> => {
       try {
-        await fetchSheetData(SHEET_IDS.PROJECAO_2025);
+        await fetchSheetData(SHEET_IDS.EVOLUCAO_RECEITA);
         return parseRevenueEvolution();
       } catch {
         return parseRevenueEvolution();
@@ -118,7 +118,7 @@ export function useCaptacaoData(year: '2025' | '2026') {
     queryKey: ['captacao-data', year],
     queryFn: async (): Promise<CaptacaoData> => {
       try {
-        await fetchSheetData(SHEET_IDS.PROJECAO_2025);
+        await fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
         return parseCaptacaoData(year);
       } catch {
         return parseCaptacaoData(year);
@@ -141,7 +141,7 @@ export function useCustomerData() {
     queryKey: ['customer-data'],
     queryFn: async (): Promise<CustomerData> => {
       try {
-        await fetchSheetData(SHEET_IDS.INDICADORES);
+        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
         return parseCustomerData();
       } catch {
         return parseCustomerData();
@@ -164,7 +164,7 @@ export function usePeopleData() {
     queryKey: ['people-data'],
     queryFn: async (): Promise<PeopleData> => {
       try {
-        await fetchSheetData(SHEET_IDS.INDICADORES);
+        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
         return parsePeopleData();
       } catch {
         return parsePeopleData();
@@ -187,7 +187,7 @@ export function useESGData() {
     queryKey: ['esg-data'],
     queryFn: async (): Promise<ESGData> => {
       try {
-        await fetchSheetData(SHEET_IDS.INDICADORES);
+        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
         return parseESGData();
       } catch {
         return parseESGData();
@@ -210,7 +210,7 @@ export function useProcessesData() {
     queryKey: ['processes-data'],
     queryFn: async (): Promise<ProcessesData> => {
       try {
-        await fetchSheetData(SHEET_IDS.INDICADORES);
+        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
         return parseProcessesData();
       } catch {
         return parseProcessesData();

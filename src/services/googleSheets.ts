@@ -1,13 +1,16 @@
 // Google Sheets IDs - Extraídos das URLs fornecidas
 export const SHEET_IDS = {
-  // Projeção 2025 - Serviços, SPC Brasil, quantidades, faturamento
-  PROJECAO_2025: '1CakEJ7MCGwWe2gM1SUNVrdv_gaGvcrdX',
+  // Serviços 2025-2026
+  SERVICOS_2025_2026: '1i6fmNE8TDQN6ozlb-iOFw2OejuK-GiF6b1z_yYfEDmI',
   
-  // Projeção 2026 - Serviços, metas
-  PROJECAO_2026: '1_uVx9Z2oQuhgEEY4Y7IN9iq5gudD-uPR',
+  // KPIs e Indicadores
+  KPIS_INDICADORES: '1ENABBoNRHFNhZV3QpwTBegy7AFfi-5oBOwa2iu3VLd8',
   
-  // Indicadores operacionais, clientes, NPS, processos, pessoas e ESG
-  INDICADORES: '1FzEHb2OWA73jXSYIbg9dfmPuQJv8HTlr',
+  // Evolução de Receita
+  EVOLUCAO_RECEITA: '11Aqi1V7Cbx0loMyTsFJd_gLzpXLpDF0vsxwCwFQ6jdM',
+  
+  // Funil de Vendas
+  FUNIL_VENDAS: '1v44E1iRhEzM7FxpZPFCDQN782wEx69Xpf6swjyOiVrU',
 } as const;
 
 // Base URL para exportar CSV público do Google Sheets
