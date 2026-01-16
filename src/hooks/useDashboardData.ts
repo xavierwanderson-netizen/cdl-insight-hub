@@ -15,6 +15,9 @@ import type { ServiceData, FinancialData, RevenueEvolutionData, CaptacaoData, Cu
 // Stale time: 5 minutes - data updates every 5 min
 const STALE_TIME = 5 * 60 * 1000;
 
+// Refetch interval: 5 minutes - polling automático
+const REFETCH_INTERVAL = 5 * 60 * 1000;
+
 // Retry configuration
 const RETRY_CONFIG = {
   retry: 3,
@@ -27,6 +30,8 @@ export function useSheetData(sheetId: string, gid: number = 0) {
     queryKey: ['sheet', sheetId, gid],
     queryFn: () => fetchSheetData(sheetId, gid),
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 }
@@ -79,6 +84,8 @@ export function useFinancialData() {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
@@ -103,6 +110,8 @@ export function useRevenueEvolution() {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
@@ -127,6 +136,8 @@ export function useCaptacaoData(year: '2025' | '2026') {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
@@ -151,6 +162,8 @@ export function useCustomerData() {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
@@ -175,6 +188,8 @@ export function usePeopleData() {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
@@ -199,6 +214,8 @@ export function useESGData() {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
@@ -223,6 +240,8 @@ export function useProcessesData() {
       }
     },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
