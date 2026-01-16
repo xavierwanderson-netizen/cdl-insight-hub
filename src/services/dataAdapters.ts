@@ -418,11 +418,11 @@ export function parseServicesData(data2025: string[][], data2026: string[][], ye
 
 // Parse financial data
 export function parseFinancialData(data: string[][] = []): FinancialData {
-  // Default/fallback data
+  // Default/fallback data - ATUALIZADO COM VALORES DA PLANILHA
   const defaults = {
     faturamentoTotal: {
       realized2025: 20991713.51,
-      target2026: 23611340.57,
+      target2026: 23611340.57, // Soma: Serviços CDL (3.112.088,25) + SPC Brasil (19.120.528,16) + Outras (1.378.724,16)
       realized2026: 0,
     },
     servicosCDL: {
@@ -454,6 +454,7 @@ export function parseFinancialData(data: string[][] = []): FinancialData {
 
   // If no data provided, return defaults
   if (!data || data.length === 0) {
+    console.log('[parseFinancialData] Nenhum dado de planilha, usando defaults');
     return defaults;
   }
 
@@ -464,28 +465,44 @@ export function parseFinancialData(data: string[][] = []): FinancialData {
     // Estrutura esperada: Métrica | Realizado_2025 | Meta_2026 | Realizado_2026 | Status | Trend | TrendValue | Responsável | Descrição
     // Índices: 0=Métrica | 1=Realizado_2025 | 2=Meta_2026 | 3=Realizado_2026
     
+    console.log(`[parseFinancialData] Parseando dados financeiros, ${data.length} linhas recebidas`);
+    
     for (let i = 1; i < data.length; i++) { // Começa em 1 para pular header
       const row = data[i];
       if (!row || row.length < 2) continue;
 
       const label = row[0]?.toLowerCase() || '';
       
-      console.log(`[parseFinancialData] Processando: ${row[0]} = ${row[1]} | ${row[2]} | ${row[3]}`);
+      console.log(`[parseFinancialData] Row ${i}: Métrica="${row[0]}" | Real2025="${row[1]}" | Meta2026="${row[2]}" | Real2026="${row[3]}"`);
       
       if (label.includes('faturamento total') || label.includes('receita total')) {
-        result.faturamentoTotal.realized2025 = parseCurrency(row[1]) || defaults.faturamentoTotal.realized2025;
-        result.faturamentoTotal.target2026 = parseCurrency(row[2]) || defaults.faturamentoTotal.target2026;
-        result.faturamentoTotal.realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
+        const realValue = parseCurrency(row[1]) || parseNumber(row[1]) || defaults.faturamentoTotal.realized2025;
+        const targetValue = parseCurrency(row[2]) || parseNumber(row[2]) || defaults.faturamentoTotal.target2026;
+        const realValue2026 = row.length > 3 ? (parseCurrency(row[3]) || parseNumber(row[3]) || 0) : 0;
+        
+        console.log(`[parseFinancialData] Faturamento Total: Real2025=${realValue} | Target2026=${targetValue} | Real2026=${realValue2026}`);
+        
+        result.faturamentoTotal.realized2025 = realValue;
+        result.faturamentoTotal.target2026 = targetValue;
+        result.faturamentoTotal.realized2026 = realValue2026;
       }
       else if (label.includes('serviços cdl')) {
-        result.servicosCDL.realized2025 = parseCurrency(row[1]) || defaults.servicosCDL.realized2025;
-        result.servicosCDL.target2026 = parseCurrency(row[2]) || defaults.servicosCDL.target2026;
-        result.servicosCDL.realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
+        const realValue = parseCurrency(row[1]) || parseNumber(row[1]) || defaults.servicosCDL.realized2025;
+        const targetValue = parseCurrency(row[2]) || parseNumber(row[2]) || defaults.servicosCDL.target2026;
+        const realValue2026 = row.length > 3 ? (parseCurrency(row[3]) || parseNumber(row[3]) || 0) : 0;
+        
+        result.servicosCDL.realized2025 = realValue;
+        result.servicosCDL.target2026 = targetValue;
+        result.servicosCDL.realized2026 = realValue2026;
       }
       else if (label.includes('spc brasil')) {
-        result.spcBrasil.realized2025 = parseCurrency(row[1]) || defaults.spcBrasil.realized2025;
-        result.spcBrasil.target2026 = parseCurrency(row[2]) || defaults.spcBrasil.target2026;
-        result.spcBrasil.realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
+        const realValue = parseCurrency(row[1]) || parseNumber(row[1]) || defaults.spcBrasil.realized2025;
+        const targetValue = parseCurrency(row[2]) || parseNumber(row[2]) || defaults.spcBrasil.target2026;
+        const realValue2026 = row.length > 3 ? (parseCurrency(row[3]) || parseNumber(row[3]) || 0) : 0;
+        
+        result.spcBrasil.realized2025 = realValue;
+        result.spcBrasil.target2026 = targetValue;
+        result.spcBrasil.realized2026 = realValue2026;
       }
       else if (label.includes('inadimplência')) {
         result.inadimplencia = parsePercent(row[1]) || defaults.inadimplencia;
@@ -500,6 +517,7 @@ export function parseFinancialData(data: string[][] = []): FinancialData {
         result.margemLiquidaTarget = parsePercent(row[2]) || defaults.margemLiquidaTarget;
       }
     }
+    console.log('[parseFinancialData] ✅ Parse completo, Meta Faturamento 2026:', result.faturamentoTotal.target2026);
     return result;
   } catch (error) {
     console.error('Error parsing financial data:', error);
