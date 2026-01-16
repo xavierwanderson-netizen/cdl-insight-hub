@@ -1,4 +1,4 @@
-import type { FunnelStage } from '@/data/dashboardData';
+import type { FunnelStage } from '@/data/types';
 import { formatNumber } from '@/data/utils';
 
 interface FunnelChartProps {
@@ -17,7 +17,7 @@ export function FunnelChart({ data }: FunnelChartProps) {
           const widthPercent = 100 - (index * 15);
           
           return (
-            <div key={stage.stage} className="relative">
+            <div key={stage.id || stage.name} className="relative">
               <div
                 className="relative h-14 rounded-lg flex items-center justify-between px-4 transition-all hover:scale-[1.02]"
                 style={{ 
@@ -27,10 +27,10 @@ export function FunnelChart({ data }: FunnelChartProps) {
                   marginRight: 'auto',
                 }}
               >
-                <span className="text-white font-medium text-sm">{stage.stage}</span>
+                <span className="text-white font-medium text-sm">{stage.name}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-white font-bold">{formatNumber(stage.value)}</span>
-                  <span className="text-white/70 text-sm">({stage.percentage}%)</span>
+                  <span className="text-white/70 text-sm">({stage.percentage.toFixed(1)}%)</span>
                 </div>
               </div>
               
@@ -54,7 +54,7 @@ export function FunnelChart({ data }: FunnelChartProps) {
           <div>
             <p className="text-muted-foreground">Taxa de Conversão Total</p>
             <p className="text-2xl font-bold font-display text-status-success">
-              {data.length > 0 ? ((data[data.length - 1].value / data[0].value) * 100).toFixed(1) : 0}%
+              {data.length > 0 && data[0].value > 0 ? ((data[data.length - 1].value / data[0].value) * 100).toFixed(1) : 0}%
             </p>
           </div>
           <div>

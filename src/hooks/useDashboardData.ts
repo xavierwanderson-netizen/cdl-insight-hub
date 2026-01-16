@@ -132,13 +132,15 @@ export function useRevenueEvolution() {
   };
 }
 
-// Hook para dados de captação
+// Hook para dados de captação - busca da planilha FUNIL_VENDAS
 export function useCaptacaoData(year: '2025' | '2026') {
   const query = useQuery({
     queryKey: ['captacao-data', year],
     queryFn: async (): Promise<CaptacaoData> => {
       try {
-        const data = await fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
+        // Buscar dados da planilha correta: FUNIL_VENDAS
+        const data = await fetchSheetData(SHEET_IDS.FUNIL_VENDAS);
+        console.log(`[useCaptacaoData] Dados do funil carregados: ${data.length} linhas`);
         return parseCaptacaoData(year, data);
       } catch (error) {
         console.error('Failed to fetch captacao data:', error);
