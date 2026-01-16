@@ -564,8 +564,20 @@ export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionDa
       const monthIndex = MONTHS_FULL.findIndex(m => monthName.toLowerCase().includes(m.toLowerCase()));
       
       if (monthIndex >= 0) {
-        const realized2025 = parseCurrency(row[1]) || defaults[monthIndex].realized2025;
+        // Coluna 1: Realizado_2025 - pode vir como número puro (1925870.41) ou moeda (R$ 1.925.870,41)
+        let realized2025 = 0;
+        const val2025 = row[1]?.trim() || '';
+        if (val2025.includes('R$') || val2025.includes(',')) {
+          realized2025 = parseCurrency(val2025);
+        } else {
+          realized2025 = parseFloat(val2025) || 0;
+        }
+        if (realized2025 === 0) realized2025 = defaults[monthIndex].realized2025;
+        
+        // Coluna 2: Meta_2026 - geralmente vem como moeda
         const target2026 = parseCurrency(row[2]) || defaults[monthIndex].target2026;
+        
+        // Coluna 3: Realizado_2026 - geralmente vem como moeda
         const realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
         
         result.push({

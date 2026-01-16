@@ -2,21 +2,125 @@ import { KPICard } from '../KPICard';
 import { ServiceTable } from '../ServiceTable';
 import { RevenueChart } from '../RevenueChart';
 import { FunnelChart } from '../FunnelChart';
-import { 
-  executiveKPIs, 
-  servicesData, 
-  salesFunnel, 
-  revenueEvolution,
-  strategicProjects,
-  formatCurrency
-} from '@/data/dashboardData';
-import { AlertTriangle, TrendingUp, Target, Users, DollarSign, BarChart3 } from 'lucide-react';
+import { useFinancialData, useRevenueEvolution, useServicesData, useCaptacaoData } from '@/hooks/useDashboardData';
+import { formatCurrency } from '@/data/dashboardData';
+import { AlertTriangle, TrendingUp, Target, Users, DollarSign, BarChart3, Loader2 } from 'lucide-react';
+import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
+import type { FunnelStage } from '@/data/types';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 export function OverviewView() {
-  // Calculate summary stats
-  const totalRevenueMeta = 19811998;
-  const totalRevenueRealized = 0;
-  const revenueProgress = (totalRevenueRealized / totalRevenueMeta) * 100;
+  // Buscar dados reais das planilhas
+  const { data: financialData, isLoading: loadingFinancial } = useFinancialData();
+  const { data: revenueData, isLoading: loadingRevenue } = useRevenueEvolution();
+  const { data: servicesData, isLoading: loadingServices } = useServicesData('2025');
+  const { data: captacaoData, isLoading: loadingCaptacao } = useCaptacaoData('2026');
+
+  const isLoading = loadingFinancial || loadingRevenue || loadingServices || loadingCaptacao;
+
+  // Calcular valores reais
+  const totalRevenueMeta = financialData.faturamentoTotal.target2026;
+  const totalRevenueRealized = financialData.faturamentoTotal.realized2026;
+  const totalRevenue2025 = financialData.faturamentoTotal.realized2025;
+  const revenueProgress = totalRevenueMeta > 0 ? (totalRevenueRealized / totalRevenueMeta) * 100 : 0;
+  const growthVs2025 = totalRevenue2025 > 0 ? ((totalRevenueMeta - totalRevenue2025) / totalRevenue2025) * 100 : 0;
+
+  // KPIs dinâmicos baseados nos dados reais
+  const executiveKPIs: KPIData[] = [
+    { 
+      id: 'faturamento-total', 
+      label: 'Faturamento 2025', 
+      value: financialData.faturamentoTotal.realized2025, 
+      target: financialData.faturamentoTotal.target2026, 
+      prefix: 'R$', 
+      status: 'warning' as StatusType, 
+      trend: 'up' as TrendType, 
+      trendValue: `+${growthVs2025.toFixed(0)}%` 
+    },
+    { 
+      id: 'servicos-cdl', 
+      label: 'Serviços CDL', 
+      value: financialData.servicosCDL.realized2025, 
+      target: financialData.servicosCDL.target2026, 
+      prefix: 'R$', 
+      status: 'warning' as StatusType, 
+      trend: 'up' as TrendType, 
+      trendValue: '+16.7%' 
+    },
+    { 
+      id: 'spc-brasil', 
+      label: 'SPC Brasil', 
+      value: financialData.spcBrasil.realized2025, 
+      target: financialData.spcBrasil.target2026, 
+      prefix: 'R$', 
+      status: 'warning' as StatusType, 
+      trend: 'up' as TrendType, 
+      trendValue: '+9.7%' 
+    },
+    { 
+      id: 'inadimplencia', 
+      label: 'Inadimplência', 
+      value: financialData.inadimplencia, 
+      target: financialData.inadimplenciaTarget, 
+      unit: '%', 
+      status: financialData.inadimplencia > financialData.inadimplenciaTarget ? 'danger' as StatusType : 'success' as StatusType, 
+      trend: 'down' as TrendType, 
+      trendValue: `Meta <${financialData.inadimplenciaTarget}%`, 
+      responsible: 'Karla' 
+    },
+    { 
+      id: 'ebitda', 
+      label: 'EBITDA', 
+      value: financialData.ebitda, 
+      target: financialData.ebitdaTarget, 
+      unit: '%', 
+      status: 'warning' as StatusType, 
+      trend: 'up' as TrendType, 
+      trendValue: '+2pp' 
+    },
+    { 
+      id: 'margem-liquida', 
+      label: 'Margem Líquida', 
+      value: financialData.margemLiquida, 
+      target: financialData.margemLiquidaTarget, 
+      unit: '%', 
+      status: 'warning' as StatusType, 
+      trend: 'up' as TrendType, 
+      trendValue: '+1.5pp' 
+    },
+  ];
+
+  // Funil de vendas dinâmico baseado nos dados de captação
+  const salesFunnel: FunnelStage[] = [
+    { id: 'leads', name: 'Leads', value: captacaoData.leads, target: captacaoData.leadsTarget, percentage: 100, color: 'hsl(222, 65%, 35%)' },
+    { id: 'qualificados', name: 'Qualificados', value: captacaoData.leadsQualificados, target: captacaoData.leadsQualificadosTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.leadsQualificados / captacaoData.leadsTarget) * 100 : 0, color: 'hsl(38, 92%, 50%)' },
+    { id: 'propostas', name: 'Propostas', value: captacaoData.propostas, target: captacaoData.propostasTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.propostas / captacaoData.leadsTarget) * 100 : 0, color: 'hsl(142, 71%, 45%)' },
+    { id: 'novos', name: 'Novos Associados', value: captacaoData.novosAssociados, target: captacaoData.novosAssociadosTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.novosAssociados / captacaoData.leadsTarget) * 100 : 0, color: 'hsl(262, 80%, 55%)' },
+  ];
+
+  // Projetos estratégicos
+  const strategicProjects = [
+    { id: 'sap', name: 'Otimização SAP', progress: 35, status: 'warning' as StatusType },
+    { id: 'crm', name: 'CRM Bitrix', progress: 60, status: 'warning' as StatusType },
+    { id: 'bi', name: 'BI Executivo', progress: 20, status: 'danger' as StatusType },
+  ];
+
+  // Converter revenueData para formato do gráfico
+  const revenueEvolutionChart = revenueData.map(item => ({
+    month: item.shortMonth,
+    realizado2025: item.realized2025,
+    meta2026: item.target2026,
+    realizado2026: item.realized2026,
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Carregando dados...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -39,7 +143,7 @@ export function OverviewView() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
               <p className="text-xs text-white/70">Crescimento vs 2025</p>
-              <p className="text-xl font-bold font-display">+12%</p>
+              <p className="text-xl font-bold font-display">+{growthVs2025.toFixed(0)}%</p>
             </div>
           </div>
         </div>
@@ -52,7 +156,9 @@ export function OverviewView() {
           <div>
             <p className="font-medium text-sm">Pontos de Atenção</p>
             <p className="text-xs text-muted-foreground">
-              Inadimplência acima da meta (7.2% vs 6%) • Taxa de conversão de leads baixa (4% vs 20%) • 0 integrações sistêmicas implementadas
+              Inadimplência acima da meta ({financialData.inadimplencia}% vs {financialData.inadimplenciaTarget}%) • 
+              Taxa de conversão: {captacaoData.taxaConversao.toFixed(0)}% (Meta: {captacaoData.taxaConversaoTarget}%) • 
+              Integrações sistêmicas: 2/5 implementadas
             </p>
           </div>
         </div>
@@ -64,7 +170,7 @@ export function OverviewView() {
           <BarChart3 className="w-5 h-5 text-primary" />
           Indicadores-Chave de Performance
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {executiveKPIs.map((kpi, index) => (
             <KPICard key={kpi.id} data={kpi} delay={index * 50} />
           ))}
@@ -73,7 +179,7 @@ export function OverviewView() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RevenueChart data={revenueEvolution} />
+        <RevenueChart data={revenueEvolutionChart} />
         <FunnelChart data={salesFunnel} />
       </div>
 
@@ -111,21 +217,24 @@ export function OverviewView() {
           </div>
         </div>
 
-        {/* Member Stats */}
+        {/* Member Stats - Dados da planilha via captação */}
         <div className="dashboard-card p-5 animate-fade-in" style={{ animationDelay: '50ms' }}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-status-success/10 flex items-center justify-center">
               <Users className="w-5 h-5 text-status-success" />
             </div>
             <div>
-              <p className="text-sm font-medium">Base de Associados</p>
-              <p className="text-xs text-muted-foreground">Meta: +15%</p>
+              <p className="text-sm font-medium">Meta Novos Associados</p>
+              <p className="text-xs text-muted-foreground">Captação 2026</p>
             </div>
           </div>
-          <p className="text-3xl font-bold font-display">3.925</p>
-          <p className="text-sm text-muted-foreground mt-1">Meta 2026: 4.514</p>
+          <p className="text-3xl font-bold font-display">{captacaoData.novosAssociados}</p>
+          <p className="text-sm text-muted-foreground mt-1">Meta 2026: {captacaoData.novosAssociadosTarget}</p>
           <div className="progress-bar mt-2">
-            <div className="progress-bar-fill warning" style={{ width: '87%' }} />
+            <div 
+              className={`progress-bar-fill ${captacaoData.novosAssociados >= captacaoData.novosAssociadosTarget * 0.9 ? 'success' : 'warning'}`} 
+              style={{ width: `${Math.min((captacaoData.novosAssociados / captacaoData.novosAssociadosTarget) * 100, 100)}%` }} 
+            />
           </div>
         </div>
 
@@ -140,10 +249,10 @@ export function OverviewView() {
               <p className="text-xs text-muted-foreground">Acumulado 2026</p>
             </div>
           </div>
-          <p className="text-3xl font-bold font-display">{formatCurrency(0)}</p>
+          <p className="text-3xl font-bold font-display">{formatCurrency(totalRevenueRealized)}</p>
           <p className="text-sm text-muted-foreground mt-1">Meta: {formatCurrency(totalRevenueMeta)}</p>
           <div className="progress-bar mt-2">
-            <div className="progress-bar-fill danger" style={{ width: '0%' }} />
+            <div className={`progress-bar-fill ${revenueProgress >= 90 ? 'success' : revenueProgress >= 50 ? 'warning' : 'danger'}`} style={{ width: `${Math.min(revenueProgress, 100)}%` }} />
           </div>
         </div>
 
@@ -159,7 +268,7 @@ export function OverviewView() {
             </div>
           </div>
           <div className="space-y-2">
-            {strategicProjects.slice(0, 3).map((project) => (
+            {strategicProjects.map((project) => (
               <div key={project.id} className="flex items-center justify-between">
                 <span className="text-sm truncate flex-1">{project.name}</span>
                 <span className={`status-badge ${project.status} shrink-0 ml-2`}>
