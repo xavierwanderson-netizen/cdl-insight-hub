@@ -12,11 +12,11 @@ import {
 } from '@/services/dataAdapters';
 import type { ServiceData, FinancialData, RevenueEvolutionData, CaptacaoData, CustomerData, PeopleData, ESGData, ProcessesData } from '@/data/types';
 
-// Stale time: 5 minutes - data updates every 5 min
-const STALE_TIME = 5 * 60 * 1000;
+// Stale time: 30 seconds - data updates frequently during dev
+const STALE_TIME = 30 * 1000;
 
-// Refetch interval: 5 minutes - polling automático
-const REFETCH_INTERVAL = 5 * 60 * 1000;
+// Refetch interval: 30 seconds - polling automático (mais frequente)
+const REFETCH_INTERVAL = 30 * 1000;
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -40,15 +40,25 @@ export function useSheetData(sheetId: string, gid: number = 0) {
 export function useServicesData(year: '2025' | '2026') {
   const query2025 = useQuery({
     queryKey: ['sheet', SHEET_IDS.SERVICOS_2025_2026],
-    queryFn: () => fetchSheetData(SHEET_IDS.SERVICOS_2025_2026),
+    queryFn: () => {
+      console.log('[Services 2025] Iniciando fetch...');
+      return fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
+    },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 
   const query2026 = useQuery({
     queryKey: ['sheet', SHEET_IDS.SERVICOS_2025_2026],
-    queryFn: () => fetchSheetData(SHEET_IDS.SERVICOS_2025_2026),
+    queryFn: () => {
+      console.log('[Services 2026] Iniciando fetch...');
+      return fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
+    },
     staleTime: STALE_TIME,
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
     ...RETRY_CONFIG,
   });
 

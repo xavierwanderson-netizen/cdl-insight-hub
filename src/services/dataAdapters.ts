@@ -99,8 +99,126 @@ export function parseCertificadoDigital(data2025: string[][], data2026: string[]
   };
 }
 
+// Parse services from Google Sheets data - Nova estrutura 2026
+function parseServicesFromSheets(data: string[][], year: '2025' | '2026'): ServiceData[] {
+  const services: ServiceData[] = [];
+  
+  console.log(`[parseServicesFromSheets] Parseando dados de ${year}: ${data.length} linhas`);
+  if (data.length > 0) {
+    console.log(`[parseServicesFromSheets] Headers:`, data[0]);
+  }
+  
+  // Pula linha de header
+  if (data.length < 2) return services;
+  
+  const headers = data[0].map(h => h.toLowerCase().trim());
+  console.log(`[parseServicesFromSheets] Headers processados:`, headers);
+  
+  // Processa cada serviço (uma linha por serviço)
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length < 2) continue;
+    
+    const serviceName = row[0] ? row[0].trim() : '';
+    
+    // Ignora linhas vazias
+    if (!serviceName || serviceName === '') {
+      continue;
+    }
+    
+    let totalQuantity = 0;
+    let totalRevenue = 0;
+    let totalQuantityTarget = 0;
+    let totalRevenueTarget = 0;
+    const monthlyData: MonthlyData[] = [];
+    
+    // Estrutura: Serviço | Jan_Qtd | Jan_Fat | Jan_Real_Qtd | Jan_Real_Fat | Fev_Qtd | Fev_Fat | Fev_Real_Qtd | Fev_Real_Fat | ...
+    // Padrão por mês: [Qtd, Fat, Real_Qtd, Real_Fat] = 4 colunas por mês
+    
+    for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+      // Para cada mês, temos 4 colunas: Qtd(meta), Fat(meta), Real_Qtd, Real_Fat
+      const baseCol = 1 + (monthIndex * 4); // Começa na coluna 1 (0=Serviço)
+      
+      const metaQtd = parseNumber(row[baseCol] || '0');
+      const metaFat = parseCurrency(row[baseCol + 1] || '0');
+      const realQtd = parseNumber(row[baseCol + 2] || '0');
+      const realFat = parseCurrency(row[baseCol + 3] || '0');
+      
+      // Se não há dados, para de processar meses
+      if (baseCol + 3 >= row.length) break;
+      
+      // Para 2026, usa dados reais; para 2025, usa meta como realizado
+      let quantity = 0;
+      let revenue = 0;
+      let quantityTarget = 0;
+      let revenueTarget = 0;
+      
+      if (year === '2026') {
+        quantity = realQtd;
+        revenue = realFat;
+        quantityTarget = metaQtd;
+        revenueTarget = metaFat;
+      } else {
+        // Para 2025, as colunas meta são na verdade realizadas
+        quantity = metaQtd;
+        revenue = metaFat;
+      }
+      
+      totalQuantity += quantity;
+      totalRevenue += revenue;
+      totalQuantityTarget += quantityTarget;
+      totalRevenueTarget += revenueTarget;
+      
+      monthlyData.push({
+        month: MONTHS_FULL[monthIndex],
+        shortMonth: MONTHS[monthIndex],
+        quantity,
+        quantityTarget,
+        revenue,
+        revenueTarget,
+      });
+    }
+    
+    const ticketMedio = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
+    
+    const service: ServiceData = {
+      id: serviceName.toLowerCase().replace(/\s+/g, '-'),
+      name: serviceName,
+      quantity: totalQuantity,
+      quantityTarget: totalQuantityTarget,
+      revenue: totalRevenue,
+      revenueTarget: totalRevenueTarget,
+      ticketMedio,
+      status: calculateStatus(totalRevenue, totalRevenueTarget),
+      monthlyData,
+    };
+    
+    services.push(service);
+    console.log(`[parseServicesFromSheets] ✅ ${serviceName}: Qtd=${totalQuantity}, Fat=R$ ${totalRevenue}`);
+  }
+  
+  return services;
+}
+
 // Parse all services from raw data
 export function parseServicesData(data2025: string[][], data2026: string[][], year: '2025' | '2026'): ServiceData[] {
+  const selectedData = year === '2025' ? data2025 : data2026;
+  
+  // Se temos dados do Google Sheets, tenta parsear
+  if (selectedData && selectedData.length > 0) {
+    try {
+      console.log(`[parseServicesData] Parseando dados de ${year}...`);
+      const parsed = parseServicesFromSheets(selectedData, year);
+      console.log(`[parseServicesData] ✅ ${parsed.length} serviços parseados com sucesso`);
+      return parsed;
+    } catch (error) {
+      console.error(`[parseServicesData] ❌ Erro ao parsear dados do Google Sheets:`, error);
+    }
+  }
+
+  // Fallback para dados hardcoded
+  console.log(`[parseServicesData] ⚠️ Usando dados hardcoded de ${year}`);
+  
   // Pre-extracted data from Excel files
   const services2025: ServiceData[] = [
     {
@@ -343,26 +461,43 @@ export function parseFinancialData(data: string[][] = []): FinancialData {
   try {
     let result = { ...defaults };
     
-    for (let i = 0; i < data.length; i++) {
+    // Estrutura esperada: Métrica | Realizado_2025 | Meta_2026 | Realizado_2026 | Status | Trend | TrendValue | Responsável | Descrição
+    // Índices: 0=Métrica | 1=Realizado_2025 | 2=Meta_2026 | 3=Realizado_2026
+    
+    for (let i = 1; i < data.length; i++) { // Começa em 1 para pular header
       const row = data[i];
       if (!row || row.length < 2) continue;
 
       const label = row[0]?.toLowerCase() || '';
       
+      console.log(`[parseFinancialData] Processando: ${row[0]} = ${row[1]} | ${row[2]} | ${row[3]}`);
+      
       if (label.includes('faturamento total') || label.includes('receita total')) {
-        if (row.length > 2) {
-          result.faturamentoTotal.realized2025 = parseCurrency(row[1]) || defaults.faturamentoTotal.realized2025;
-          if (row.length > 3) result.faturamentoTotal.target2026 = parseCurrency(row[2]) || defaults.faturamentoTotal.target2026;
-          if (row.length > 4) result.faturamentoTotal.realized2026 = parseCurrency(row[3]) || defaults.faturamentoTotal.realized2026;
-        }
+        result.faturamentoTotal.realized2025 = parseCurrency(row[1]) || defaults.faturamentoTotal.realized2025;
+        result.faturamentoTotal.target2026 = parseCurrency(row[2]) || defaults.faturamentoTotal.target2026;
+        result.faturamentoTotal.realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
       }
-      if (label.includes('inadimplência')) {
-        if (row.length > 1) {
-          result.inadimplencia = parsePercent(row[1]) || defaults.inadimplencia;
-        }
-        if (row.length > 2) {
-          result.inadimplenciaTarget = parsePercent(row[2]) || defaults.inadimplenciaTarget;
-        }
+      else if (label.includes('serviços cdl')) {
+        result.servicosCDL.realized2025 = parseCurrency(row[1]) || defaults.servicosCDL.realized2025;
+        result.servicosCDL.target2026 = parseCurrency(row[2]) || defaults.servicosCDL.target2026;
+        result.servicosCDL.realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
+      }
+      else if (label.includes('spc brasil')) {
+        result.spcBrasil.realized2025 = parseCurrency(row[1]) || defaults.spcBrasil.realized2025;
+        result.spcBrasil.target2026 = parseCurrency(row[2]) || defaults.spcBrasil.target2026;
+        result.spcBrasil.realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
+      }
+      else if (label.includes('inadimplência')) {
+        result.inadimplencia = parsePercent(row[1]) || defaults.inadimplencia;
+        result.inadimplenciaTarget = parsePercent(row[2]) || defaults.inadimplenciaTarget;
+      }
+      else if (label.includes('ebitda')) {
+        result.ebitda = parsePercent(row[1]) || defaults.ebitda;
+        result.ebitdaTarget = parsePercent(row[2]) || defaults.ebitdaTarget;
+      }
+      else if (label.includes('margem líquida') || label.includes('margem liquida')) {
+        result.margemLiquida = parsePercent(row[1]) || defaults.margemLiquida;
+        result.margemLiquidaTarget = parsePercent(row[2]) || defaults.margemLiquidaTarget;
       }
     }
     return result;
@@ -372,7 +507,7 @@ export function parseFinancialData(data: string[][] = []): FinancialData {
   }
 }
 
-// Parse revenue evolution data
+// Parse revenue evolution data - Estrutura: Mês | Realizado_2025 | Meta_2026 | Realizado_2026 | Variação_%
 export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionData[] {
   const defaults: RevenueEvolutionData[] = [
     { month: 'Janeiro', shortMonth: 'Jan', realized2025: 1925870.41, target2026: 2081843.18, realized2026: 0 },
@@ -398,22 +533,32 @@ export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionDa
   try {
     const result: RevenueEvolutionData[] = [];
     
-    // Skip header row if present
-    const startRow = data[0]?.[0]?.toLowerCase().includes('mês') ? 1 : 0;
+    // Skip header row if present (procura por "mês" ou "mes")
+    const startRow = data[0]?.[0]?.toLowerCase().includes('mês') || data[0]?.[0]?.toLowerCase().includes('mes') ? 1 : 0;
+    
+    console.log(`[parseRevenueEvolution] Iniciando parse da receita, startRow=${startRow}, total linhas=${data.length}`);
     
     for (let i = startRow; i < Math.min(startRow + 12, data.length); i++) {
       const row = data[i];
       if (!row || row.length < 2) continue;
       
-      const monthIndex = MONTHS_FULL.findIndex(m => row[0]?.toLowerCase().includes(m.toLowerCase()));
+      const monthName = row[0]?.trim() || '';
+      const monthIndex = MONTHS_FULL.findIndex(m => monthName.toLowerCase().includes(m.toLowerCase()));
+      
       if (monthIndex >= 0) {
+        const realized2025 = parseCurrency(row[1]) || defaults[monthIndex].realized2025;
+        const target2026 = parseCurrency(row[2]) || defaults[monthIndex].target2026;
+        const realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
+        
         result.push({
           month: MONTHS_FULL[monthIndex],
           shortMonth: MONTHS[monthIndex],
-          realized2025: parseCurrency(row[1]) || defaults[monthIndex].realized2025,
-          target2026: parseCurrency(row[2]) || defaults[monthIndex].target2026,
-          realized2026: row.length > 3 ? parseCurrency(row[3]) : 0,
+          realized2025,
+          target2026,
+          realized2026,
         });
+        
+        console.log(`[parseRevenueEvolution] ${monthName}: Real2025=${realized2025}, Target2026=${target2026}, Real2026=${realized2026}`);
       }
     }
     
@@ -426,18 +571,82 @@ export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionDa
 
 // Parse captação data
 export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []): CaptacaoData {
+  // Estrutura esperada da planilha FUNIL: Estágio | Quantidade | Meta | Percentual | Cor_Hex
+  
+  const defaults2025 = {
+    leads: 2000,
+    leadsTarget: 2500,
+    leadsQualificados: 800,
+    leadsQualificadosTarget: 1000,
+    propostas: 650,
+    propostasTarget: 800,
+    novosAssociados: 565,
+    novosAssociadosTarget: 900,
+    taxaConversao: 28.25,
+    taxaConversaoTarget: 20.0,
+  };
+  
+  const defaults2026 = {
+    leads: 0,
+    leadsTarget: 3000,
+    leadsQualificados: 0,
+    leadsQualificadosTarget: 1200,
+    propostas: 0,
+    propostasTarget: 960,
+    novosAssociados: 0,
+    novosAssociadosTarget: 864,
+    taxaConversao: 0,
+    taxaConversaoTarget: 20.0,
+  };
+  
+  const defaults = year === '2025' ? defaults2025 : defaults2026;
+  
+  // Try to parse from Google Sheets
+  if (data && data.length > 1) {
+    try {
+      console.log(`[parseCaptacaoData] Parseando dados de funil para ${year}`);
+      
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 2) continue;
+        
+        const stage = row[0]?.toLowerCase() || '';
+        const quantity = parseNumber(row[1] || '0');
+        const meta = parseNumber(row[2] || '0');
+        
+        if (stage.includes('lead')) {
+          if (!stage.includes('qualificado')) {
+            defaults.leads = quantity;
+            defaults.leadsTarget = meta;
+          } else {
+            defaults.leadsQualificados = quantity;
+            defaults.leadsQualificadosTarget = meta;
+          }
+        } else if (stage.includes('proposta')) {
+          defaults.propostas = quantity;
+          defaults.propostasTarget = meta;
+        } else if (stage.includes('novo') || stage.includes('conversão') || stage.includes('conversao')) {
+          if (stage.includes('conversão') || stage.includes('conversao')) {
+            // Taxa de conversão (em percentual)
+            defaults.taxaConversao = parsePercent(row[1] || '0');
+            defaults.taxaConversaoTarget = parsePercent(row[2] || '0');
+          } else {
+            // Novos Associados
+            defaults.novosAssociados = quantity;
+            defaults.novosAssociadosTarget = meta;
+          }
+        }
+      }
+      
+      console.log(`[parseCaptacaoData] ✅ Funil parseado: Leads=${defaults.leads}, Qualificados=${defaults.leadsQualificados}`);
+    } catch (error) {
+      console.error(`[parseCaptacaoData] ❌ Erro ao parsear funil:`, error);
+    }
+  }
+  
   if (year === '2025') {
     return {
-      leads: 2000,
-      leadsTarget: 2500,
-      leadsQualificados: 800,
-      leadsQualificadosTarget: 1000,
-      propostas: 650,
-      propostasTarget: 800,
-      novosAssociados: 565,
-      novosAssociadosTarget: 900,
-      taxaConversao: 28.25,
-      taxaConversaoTarget: 20.0,
+      ...defaults,
       monthlyData: [
         { month: 'Janeiro', shortMonth: 'Jan', captacao: 60, target: 75 },
         { month: 'Fevereiro', shortMonth: 'Fev', captacao: 70, target: 75 },
@@ -456,16 +665,7 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
   }
   
   return {
-    leads: 0,
-    leadsTarget: 3000,
-    leadsQualificados: 0,
-    leadsQualificadosTarget: 1200,
-    propostas: 0,
-    propostasTarget: 960,
-    novosAssociados: 0,
-    novosAssociadosTarget: 864,
-    taxaConversao: 0,
-    taxaConversaoTarget: 20.0,
+    ...defaults,
     monthlyData: MONTHS_FULL.map((month, i) => ({
       month,
       shortMonth: MONTHS[i],

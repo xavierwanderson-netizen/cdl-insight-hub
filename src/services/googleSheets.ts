@@ -74,6 +74,7 @@ export function parseNumber(value: string): number {
 export async function fetchSheetData(sheetId: string, gid: number = 0): Promise<string[][]> {
   try {
     const url = getSheetCsvUrl(sheetId, gid);
+    console.log(`📊 Buscando dados da planilha (${sheetId})...`);
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -81,9 +82,11 @@ export async function fetchSheetData(sheetId: string, gid: number = 0): Promise<
     }
     
     const csvText = await response.text();
-    return parseCSV(csvText);
+    const parsed = parseCSV(csvText);
+    console.log(`✅ Planilha carregada com sucesso (${parsed.length} linhas)`);
+    return parsed;
   } catch (error) {
-    console.error('Error fetching sheet data:', error);
+    console.error('❌ Erro ao buscar planilha:', error);
     throw error;
   }
 }
