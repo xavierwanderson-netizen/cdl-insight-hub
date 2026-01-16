@@ -70,11 +70,11 @@ export function useFinancialData() {
   const query = useQuery({
     queryKey: ['financial-data'],
     queryFn: async (): Promise<FinancialData> => {
-      // Try to fetch from sheet, fallback to parsed data
       try {
-        await fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
-        return parseFinancialData();
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
+        return parseFinancialData(data);
+      } catch (error) {
+        console.error('Failed to fetch financial data:', error);
         return parseFinancialData();
       }
     },
@@ -95,9 +95,10 @@ export function useRevenueEvolution() {
     queryKey: ['revenue-evolution'],
     queryFn: async (): Promise<RevenueEvolutionData[]> => {
       try {
-        await fetchSheetData(SHEET_IDS.EVOLUCAO_RECEITA);
-        return parseRevenueEvolution();
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.EVOLUCAO_RECEITA);
+        return parseRevenueEvolution(data);
+      } catch (error) {
+        console.error('Failed to fetch revenue evolution:', error);
         return parseRevenueEvolution();
       }
     },
@@ -118,9 +119,10 @@ export function useCaptacaoData(year: '2025' | '2026') {
     queryKey: ['captacao-data', year],
     queryFn: async (): Promise<CaptacaoData> => {
       try {
-        await fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
-        return parseCaptacaoData(year);
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
+        return parseCaptacaoData(year, data);
+      } catch (error) {
+        console.error('Failed to fetch captacao data:', error);
         return parseCaptacaoData(year);
       }
     },
@@ -141,9 +143,10 @@ export function useCustomerData() {
     queryKey: ['customer-data'],
     queryFn: async (): Promise<CustomerData> => {
       try {
-        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
-        return parseCustomerData();
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
+        return parseCustomerData(data);
+      } catch (error) {
+        console.error('Failed to fetch customer data:', error);
         return parseCustomerData();
       }
     },
@@ -164,9 +167,10 @@ export function usePeopleData() {
     queryKey: ['people-data'],
     queryFn: async (): Promise<PeopleData> => {
       try {
-        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
-        return parsePeopleData();
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
+        return parsePeopleData(data);
+      } catch (error) {
+        console.error('Failed to fetch people data:', error);
         return parsePeopleData();
       }
     },
@@ -187,9 +191,10 @@ export function useESGData() {
     queryKey: ['esg-data'],
     queryFn: async (): Promise<ESGData> => {
       try {
-        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
-        return parseESGData();
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
+        return parseESGData(data);
+      } catch (error) {
+        console.error('Failed to fetch ESG data:', error);
         return parseESGData();
       }
     },
@@ -210,9 +215,10 @@ export function useProcessesData() {
     queryKey: ['processes-data'],
     queryFn: async (): Promise<ProcessesData> => {
       try {
-        await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
-        return parseProcessesData();
-      } catch {
+        const data = await fetchSheetData(SHEET_IDS.KPIS_INDICADORES);
+        return parseProcessesData(data);
+      } catch (error) {
+        console.error('Failed to fetch processes data:', error);
         return parseProcessesData();
       }
     },

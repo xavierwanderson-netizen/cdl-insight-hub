@@ -299,8 +299,9 @@ export function parseServicesData(data2025: string[][], data2026: string[][], ye
 }
 
 // Parse financial data
-export function parseFinancialData(): FinancialData {
-  return {
+export function parseFinancialData(data: string[][] = []): FinancialData {
+  // Default/fallback data
+  const defaults = {
     faturamentoTotal: {
       realized2025: 20991713.51,
       target2026: 23611340.57,
@@ -332,11 +333,48 @@ export function parseFinancialData(): FinancialData {
     pontualidade: 82.0,
     pontualidadeTarget: 90.0,
   };
+
+  // If no data provided, return defaults
+  if (!data || data.length === 0) {
+    return defaults;
+  }
+
+  // Try to parse financial data from CSV
+  try {
+    let result = { ...defaults };
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length < 2) continue;
+
+      const label = row[0]?.toLowerCase() || '';
+      
+      if (label.includes('faturamento total') || label.includes('receita total')) {
+        if (row.length > 2) {
+          result.faturamentoTotal.realized2025 = parseCurrency(row[1]) || defaults.faturamentoTotal.realized2025;
+          if (row.length > 3) result.faturamentoTotal.target2026 = parseCurrency(row[2]) || defaults.faturamentoTotal.target2026;
+          if (row.length > 4) result.faturamentoTotal.realized2026 = parseCurrency(row[3]) || defaults.faturamentoTotal.realized2026;
+        }
+      }
+      if (label.includes('inadimplência')) {
+        if (row.length > 1) {
+          result.inadimplencia = parsePercent(row[1]) || defaults.inadimplencia;
+        }
+        if (row.length > 2) {
+          result.inadimplenciaTarget = parsePercent(row[2]) || defaults.inadimplenciaTarget;
+        }
+      }
+    }
+    return result;
+  } catch (error) {
+    console.error('Error parsing financial data:', error);
+    return defaults;
+  }
 }
 
 // Parse revenue evolution data
-export function parseRevenueEvolution(): RevenueEvolutionData[] {
-  return [
+export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionData[] {
+  const defaults: RevenueEvolutionData[] = [
     { month: 'Janeiro', shortMonth: 'Jan', realized2025: 1925870.41, target2026: 2081843.18, realized2026: 0 },
     { month: 'Fevereiro', shortMonth: 'Fev', realized2025: 1911421.58, target2026: 2102653.90, realized2026: 0 },
     { month: 'Março', shortMonth: 'Mar', realized2025: 1845157.68, target2026: 2049977.71, realized2026: 0 },
@@ -350,10 +388,44 @@ export function parseRevenueEvolution(): RevenueEvolutionData[] {
     { month: 'Novembro', shortMonth: 'Nov', realized2025: 1828013.65, target2026: 2057633.12, realized2026: 0 },
     { month: 'Dezembro', shortMonth: 'Dez', realized2025: 0, target2026: 1983199.86, realized2026: 0 },
   ];
+
+  // If no data provided, return defaults
+  if (!data || data.length === 0) {
+    return defaults;
+  }
+
+  // Try to parse revenue evolution from CSV
+  try {
+    const result: RevenueEvolutionData[] = [];
+    
+    // Skip header row if present
+    const startRow = data[0]?.[0]?.toLowerCase().includes('mês') ? 1 : 0;
+    
+    for (let i = startRow; i < Math.min(startRow + 12, data.length); i++) {
+      const row = data[i];
+      if (!row || row.length < 2) continue;
+      
+      const monthIndex = MONTHS_FULL.findIndex(m => row[0]?.toLowerCase().includes(m.toLowerCase()));
+      if (monthIndex >= 0) {
+        result.push({
+          month: MONTHS_FULL[monthIndex],
+          shortMonth: MONTHS[monthIndex],
+          realized2025: parseCurrency(row[1]) || defaults[monthIndex].realized2025,
+          target2026: parseCurrency(row[2]) || defaults[monthIndex].target2026,
+          realized2026: row.length > 3 ? parseCurrency(row[3]) : 0,
+        });
+      }
+    }
+    
+    return result.length > 0 ? result : defaults;
+  } catch (error) {
+    console.error('Error parsing revenue evolution:', error);
+    return defaults;
+  }
 }
 
 // Parse captação data
-export function parseCaptacaoData(year: '2025' | '2026'): CaptacaoData {
+export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []): CaptacaoData {
   if (year === '2025') {
     return {
       leads: 2000,
@@ -404,7 +476,7 @@ export function parseCaptacaoData(year: '2025' | '2026'): CaptacaoData {
 }
 
 // Parse customer data
-export function parseCustomerData(): CustomerData {
+export function parseCustomerData(data: string[][] = []): CustomerData {
   return {
     nps: 78,
     npsTarget: 95,
@@ -423,7 +495,7 @@ export function parseCustomerData(): CustomerData {
 }
 
 // Parse people data
-export function parsePeopleData(): PeopleData {
+export function parsePeopleData(data: string[][] = []): PeopleData {
   return {
     colaboradoresTreinados: 65,
     colaboradoresTreinadosTarget: 80,
@@ -441,7 +513,7 @@ export function parsePeopleData(): PeopleData {
 }
 
 // Parse ESG data
-export function parseESGData(): ESGData {
+export function parseESGData(data: string[][] = []): ESGData {
   return {
     lixoEletronico: 2.5,
     lixoEletronicoTarget: 5.0,
@@ -454,7 +526,7 @@ export function parseESGData(): ESGData {
 }
 
 // Parse processes data
-export function parseProcessesData(): ProcessesData {
+export function parseProcessesData(data: string[][] = []): ProcessesData {
   return {
     processosMapeados: 45,
     processosMapeadosTarget: 100,
