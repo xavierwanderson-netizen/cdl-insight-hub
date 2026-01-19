@@ -56,15 +56,15 @@ export function KPICard({ data, delay = 0 }: KPICardProps) {
 
   return (
     <div 
-      className={`kpi-card ${getStatusClasses()} animate-fade-in`}
+      className={`kpi-card ${getStatusClasses()} animate-fade-in min-h-[140px]`}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-sm font-medium text-muted-foreground line-clamp-1">
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <span className="text-sm font-medium text-muted-foreground" title={data.label}>
           {data.label}
         </span>
-        <div className="flex items-center gap-1">
-          <span className={`status-badge ${data.status}`}>
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`status-badge ${data.status} whitespace-nowrap`}>
             {data.status === 'success' ? 'No alvo' : data.status === 'warning' ? 'Atenção' : 'Crítico'}
           </span>
           {data.description && (
@@ -82,25 +82,23 @@ export function KPICard({ data, delay = 0 }: KPICardProps) {
         </div>
       </div>
       
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-2xl font-bold font-display text-foreground">
-            {formatValue(data.value, data.prefix, data.unit)}
+      <div className="flex flex-col gap-1">
+        <p className="text-xl sm:text-2xl font-bold font-display text-foreground break-all">
+          {formatValue(data.value, data.prefix, data.unit)}
+        </p>
+        {data.target && (
+          <p className="text-xs text-muted-foreground">
+            Meta: {formatValue(data.target, data.prefix, data.unit)}
           </p>
-          {data.target && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Meta: {formatValue(data.target, data.prefix, data.unit)}
-            </p>
-          )}
-        </div>
-        
-        {data.trendValue && (
-          <div className={`flex items-center gap-1 text-sm font-medium ${getTrendClasses()}`}>
-            <TrendIcon className="w-4 h-4" />
-            <span>{data.trendValue}</span>
-          </div>
         )}
       </div>
+      
+      {data.trendValue && (
+        <div className={`flex items-center gap-1 text-sm font-medium mt-2 ${getTrendClasses()}`}>
+          <TrendIcon className="w-4 h-4 shrink-0" />
+          <span className="truncate">{data.trendValue}</span>
+        </div>
+      )}
       
       {data.responsible && (
         <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
