@@ -24,7 +24,9 @@ export function KPICard({ data, delay = 0 }: KPICardProps) {
     }
     
     if (unit === '%') {
-      return `${value}%`;
+      // Limita a 2 casas decimais para todos os percentuais
+      const formattedValue = typeof value === 'number' ? value.toFixed(2).replace('.', ',') : value;
+      return `${formattedValue}%`;
     }
     
     return formatNumber(value);

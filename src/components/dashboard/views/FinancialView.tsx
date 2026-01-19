@@ -83,7 +83,7 @@ export function FinancialView() {
       id: 'crescimento-receita',
       label: 'Crescimento Receita',
       value: financialData.faturamentoTotal.realized2025 > 0 
-        ? ((financialData.faturamentoTotal.target2026 - financialData.faturamentoTotal.realized2025) / financialData.faturamentoTotal.realized2025) * 100 
+        ? Math.round(((financialData.faturamentoTotal.target2026 - financialData.faturamentoTotal.realized2025) / financialData.faturamentoTotal.realized2025) * 10000) / 100
         : 0,
       target: 12,
       unit: '%',
