@@ -66,12 +66,13 @@ export function FunnelView() {
     },
   ];
 
-  // Funil de vendas dinâmico
+  // Funil de vendas dinâmico - percentual calculado sobre o total de leads
+  const leadsTotal = captacaoData.leads || 1; // Evita divisão por zero
   const salesFunnel: FunnelStage[] = [
     { id: 'leads', name: 'Leads', value: captacaoData.leads, target: captacaoData.leadsTarget, percentage: 100, color: 'hsl(222, 65%, 35%)' },
-    { id: 'qualificados', name: 'Qualificados', value: captacaoData.leadsQualificados, target: captacaoData.leadsQualificadosTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.leadsQualificadosTarget / captacaoData.leadsTarget) * 100 : 40, color: 'hsl(38, 92%, 50%)' },
-    { id: 'propostas', name: 'Propostas', value: captacaoData.propostas, target: captacaoData.propostasTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.propostasTarget / captacaoData.leadsTarget) * 100 : 32, color: 'hsl(142, 71%, 45%)' },
-    { id: 'novos', name: 'Novos Associados', value: captacaoData.novosAssociados, target: captacaoData.novosAssociadosTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.novosAssociadosTarget / captacaoData.leadsTarget) * 100 : 28.8, color: 'hsl(262, 80%, 55%)' },
+    { id: 'qualificados', name: 'Qualificados', value: captacaoData.leadsQualificados, target: captacaoData.leadsQualificadosTarget, percentage: (captacaoData.leadsQualificados / leadsTotal) * 100, color: 'hsl(38, 92%, 50%)' },
+    { id: 'propostas', name: 'Propostas', value: captacaoData.propostas, target: captacaoData.propostasTarget, percentage: (captacaoData.propostas / leadsTotal) * 100, color: 'hsl(142, 71%, 45%)' },
+    { id: 'novos', name: 'Novos Associados', value: captacaoData.novosAssociados, target: captacaoData.novosAssociadosTarget, percentage: (captacaoData.novosAssociados / leadsTotal) * 100, color: 'hsl(262, 80%, 55%)' },
   ];
 
   // Captação por canal (dados estáticos por enquanto - pode ser conectado a planilha futura)
