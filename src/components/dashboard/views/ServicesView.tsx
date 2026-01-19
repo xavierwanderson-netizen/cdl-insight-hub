@@ -6,7 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { formatCurrency } from '@/data/dashboardData';
 
 export function ServicesView() {
-  const { services } = useDashboard();
+  // Obter filtros e dados do contexto (já filtrados por ano/mês)
+  const { services, year, month } = useDashboard();
 
   const serviceComparison = services.slice(0, 6).map(s => ({
     name: s.name.length > 15 ? s.name.substring(0, 12) + '...' : s.name,
