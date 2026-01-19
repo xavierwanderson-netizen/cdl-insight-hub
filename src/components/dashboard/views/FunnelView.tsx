@@ -5,6 +5,7 @@ import type { KPIData } from '@/data/dashboardData';
 import type { FunnelStage } from '@/data/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useCaptacaoData } from '@/hooks/useDashboardData';
+import { useDashboard } from '@/contexts/DashboardContext';
 import { Loader2 } from 'lucide-react';
 
 const channelColors = [
@@ -16,7 +17,10 @@ const channelColors = [
 ];
 
 export function FunnelView() {
-  const { data: captacaoData, isLoading } = useCaptacaoData('2026');
+  // Obter filtros do contexto
+  const { year } = useDashboard();
+  
+  const { data: captacaoData, isLoading } = useCaptacaoData(year);
 
   // KPIs dinâmicos baseados nos dados reais de captação
   const funnelKPIs: KPIData[] = [

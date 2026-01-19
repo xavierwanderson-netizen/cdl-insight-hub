@@ -49,8 +49,8 @@ export function PeopleView() {
         <p className="text-muted-foreground mt-1">Objetivos AC14 e AC15 - Capacitação e Liderança</p>
       </div>
 
-      {/* People KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* People KPIs - 3 colunas para melhor visualização */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {Object.entries(peopleData).map(([key, data], index) => (
           <div 
             key={key}

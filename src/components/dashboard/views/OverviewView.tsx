@@ -10,11 +10,14 @@ import type { FunnelStage } from '@/data/types';
 import { useDashboard } from '@/contexts/DashboardContext';
 
 export function OverviewView() {
-  // Buscar dados reais das planilhas
+  // Obter filtros do contexto
+  const { year, month } = useDashboard();
+  
+  // Buscar dados reais das planilhas usando os filtros
   const { data: financialData, isLoading: loadingFinancial } = useFinancialData();
   const { data: revenueData, isLoading: loadingRevenue } = useRevenueEvolution();
-  const { data: servicesData, isLoading: loadingServices } = useServicesData('2025');
-  const { data: captacaoData, isLoading: loadingCaptacao } = useCaptacaoData('2026');
+  const { data: servicesData, isLoading: loadingServices } = useServicesData(year);
+  const { data: captacaoData, isLoading: loadingCaptacao } = useCaptacaoData(year);
 
   const isLoading = loadingFinancial || loadingRevenue || loadingServices || loadingCaptacao;
 

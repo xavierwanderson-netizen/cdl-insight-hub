@@ -5,11 +5,15 @@ import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/data/dashboardData';
 import { useFinancialData, useServicesData } from '@/hooks/useDashboardData';
+import { useDashboard } from '@/contexts/DashboardContext';
 import { Loader2 } from 'lucide-react';
 
 export function FinancialView() {
+  // Obter filtros do contexto
+  const { year } = useDashboard();
+  
   const { data: financialData, isLoading: loadingFinancial } = useFinancialData();
-  const { data: servicesData, isLoading: loadingServices } = useServicesData('2026');
+  const { data: servicesData, isLoading: loadingServices } = useServicesData(year);
   
   const isLoading = loadingFinancial || loadingServices;
 
@@ -119,8 +123,8 @@ export function FinancialView() {
         <p className="text-muted-foreground mt-1">OKRs F1, F2 e F3 - Solidez, Faturamento e Eficiência</p>
       </div>
 
-      {/* KPIs Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* KPIs Grid - 3 colunas para melhor visualização */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {financialKPIs.map((kpi, index) => (
           <KPICard key={kpi.id} data={kpi} delay={index * 100} />
         ))}
