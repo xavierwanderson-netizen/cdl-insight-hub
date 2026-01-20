@@ -46,9 +46,9 @@ export interface FunnelStage {
 
 export interface RevenueEvolutionData {
   month: string;
-  realizado2025: number;
-  meta2026: number;
-  realizado2026: number;
+  realized2025: number;
+  target2026: number;
+  realized2026: number;
 }
 
 export function formatCurrency(value: number): string {
@@ -78,18 +78,18 @@ export const servicesData: ServiceData[] = [
 ];
 
 export const revenueEvolution: RevenueEvolutionData[] = [
-  { month: 'Jan', realizado2025: 1925870.41, meta2026: 2081843.18, realizado2026: 0 },
-  { month: 'Fev', realizado2025: 1911421.58, meta2026: 2102653.90, realizado2026: 0 },
-  { month: 'Mar', realizado2025: 1845157.68, meta2026: 2049977.71, realizado2026: 0 },
-  { month: 'Abr', realizado2025: 1997264.32, meta2026: 2203705.70, realizado2026: 0 },
-  { month: 'Mai', realizado2025: 1867488.24, meta2026: 2086763.98, realizado2026: 0 },
-  { month: 'Jun', realizado2025: 1888179.05, meta2026: 2074600.24, realizado2026: 0 },
-  { month: 'Jul', realizado2025: 1928568.20, meta2026: 2118463.45, realizado2026: 0 },
-  { month: 'Ago', realizado2025: 1897318.04, meta2026: 2128942.93, realizado2026: 0 },
-  { month: 'Set', realizado2025: 1972833.47, meta2026: 2184473.20, realizado2026: 0 },
-  { month: 'Out', realizado2025: 1929598.87, meta2026: 2145083.29, realizado2026: 0 },
-  { month: 'Nov', realizado2025: 1828013.65, meta2026: 2057633.12, realizado2026: 0 },
-  { month: 'Dez', realizado2025: 0, meta2026: 1983199.86, realizado2026: 0 },
+  { month: 'Jan', realized2025: 1925870.41, target2026: 2081843.18, realized2026: 0 },
+  { month: 'Fev', realized2025: 1911421.58, target2026: 2102653.90, realized2026: 0 },
+  { month: 'Mar', realized2025: 1845157.68, target2026: 2049977.71, realized2026: 0 },
+  { month: 'Abr', realized2025: 1997264.32, target2026: 2203705.70, realized2026: 0 },
+  { month: 'Mai', realized2025: 1867488.24, target2026: 2086763.98, realized2026: 0 },
+  { month: 'Jun', realized2025: 1888179.05, target2026: 2074600.24, realized2026: 0 },
+  { month: 'Jul', realized2025: 1928568.20, target2026: 2118463.45, realized2026: 0 },
+  { month: 'Ago', realized2025: 1897318.04, target2026: 2128942.93, realized2026: 0 },
+  { month: 'Set', realized2025: 1972833.47, target2026: 2184473.20, realized2026: 0 },
+  { month: 'Out', realized2025: 1929598.87, target2026: 2145083.29, realized2026: 0 },
+  { month: 'Nov', realized2025: 1828013.65, target2026: 2057633.12, realized2026: 0 },
+  { month: 'Dez', realized2025: 0, target2026: 1983199.86, realized2026: 0 },
 ];
 
 export const salesFunnel: FunnelStage[] = [

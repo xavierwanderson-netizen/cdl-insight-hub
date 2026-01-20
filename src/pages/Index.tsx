@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Header } from '@/components/dashboard/Header';
+import { useDashboard } from '@/contexts/DashboardContext';
 
 const OverviewView = lazy(() => import('@/components/dashboard/views/OverviewView').then(m => ({ default: m.OverviewView })));
 const ServicesView = lazy(() => import('@/components/dashboard/views/ServicesView').then(m => ({ default: m.ServicesView })));
@@ -16,6 +17,7 @@ type TabType = 'overview' | 'services' | 'financial' | 'customers' | 'funnel' | 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isLoading } = useDashboard();
 
   const renderView = () => {
     switch (activeTab) {
@@ -54,7 +56,14 @@ const Index = () => {
         
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">Carregando...</div>}>
-            {renderView()}
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="ml-2 text-muted-foreground">Atualizando dados...</span>
+              </div>
+            ) : (
+              renderView()
+            )}
           </Suspense>
         </main>
         
