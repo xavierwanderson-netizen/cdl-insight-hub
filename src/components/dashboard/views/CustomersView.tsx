@@ -1,82 +1,86 @@
-import { Users, UserCheck, UserMinus, TrendingUp, Clock, DollarSign } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { KPICard } from '../KPICard';
 import { OKRCard } from '../OKRCard';
 import { customerOKRs } from '@/data/dashboardData';
-import type { KPIData, StatusType } from '@/data/dashboardData';
-
-const customerKPIs: KPIData[] = [
-  {
-    id: 'nps',
-    label: 'NPS Geral',
-    value: 88,
-    target: 95,
-    unit: '%',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+5pts',
-    responsible: 'Wanderson',
-  },
-  {
-    id: 'fcr',
-    label: 'FCR (First Call Resolution)',
-    value: 78,
-    target: 85,
-    unit: '%',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+3pts',
-  },
-  {
-    id: 'churn',
-    label: 'Taxa de Cancelamento',
-    value: 12,
-    target: 9.6,
-    unit: '%',
-    status: 'danger',
-    trend: 'down',
-    trendValue: '-2pp',
-    description: 'Meta: reduzir 20% vs 2025',
-  },
-  {
-    id: 'tempo-associacao',
-    label: 'Tempo Médio Associação',
-    value: 14,
-    target: 18,
-    unit: ' meses',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+2 meses',
-  },
-  {
-    id: 'receita-media',
-    label: 'Receita Média/Associado',
-    value: 5050,
-    target: 5960,
-    prefix: 'R$',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+18%',
-  },
-];
-
-const memberClassification = [
-  { name: 'Promotores (Verde)', value: 65, color: 'hsl(142, 71%, 45%)' },
-  { name: 'Neutros/Risco (Amarelo)', value: 25, color: 'hsl(38, 92%, 50%)' },
-  { name: 'Detratores (Vermelho)', value: 10, color: 'hsl(0, 84%, 60%)' },
-];
-
-const npsEvolution = [
-  { month: 'Jan', value: 82 },
-  { month: 'Fev', value: 83 },
-  { month: 'Mar', value: 84 },
-  { month: 'Abr', value: 85 },
-  { month: 'Mai', value: 86 },
-  { month: 'Jun', value: 87 },
-  { month: 'Jul', value: 88 },
-];
+import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
+import { useDashboard } from '@/contexts/DashboardContext';
+import { Loader2 } from 'lucide-react';
 
 export function CustomersView() {
+  const { customers, isLoading } = useDashboard();
+
+  // KPIs dinâmicos baseados nos dados reais da planilha
+  const customerKPIs: KPIData[] = [
+    {
+      id: 'nps',
+      label: 'NPS Geral',
+      value: customers.nps,
+      target: customers.npsTarget,
+      unit: '%',
+      status: customers.nps >= customers.npsTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: ${customers.npsTarget}%`,
+      responsible: 'Wanderson',
+    },
+    {
+      id: 'fcr',
+      label: 'FCR (First Call Resolution)',
+      value: customers.fcr,
+      target: customers.fcrTarget,
+      unit: '%',
+      status: customers.fcr >= customers.fcrTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: ${customers.fcrTarget}%`,
+    },
+    {
+      id: 'churn',
+      label: 'Taxa de Cancelamento',
+      value: customers.churn,
+      target: customers.churnTarget,
+      unit: '%',
+      status: customers.churn <= customers.churnTarget ? 'success' as StatusType : 'danger' as StatusType,
+      trend: 'down' as TrendType,
+      trendValue: `Meta: <${customers.churnTarget}%`,
+      description: 'Reduzir 20% vs 2025',
+    },
+    {
+      id: 'tempo-associacao',
+      label: 'Tempo Médio Associação',
+      value: customers.tempoMedioAssociacao,
+      target: customers.tempoMedioAssociacaoTarget,
+      unit: ' meses',
+      status: customers.tempoMedioAssociacao >= customers.tempoMedioAssociacaoTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: ${customers.tempoMedioAssociacaoTarget}m`,
+    },
+    {
+      id: 'receita-media',
+      label: 'Receita Média/Associado',
+      value: customers.receitaMediaAssociado,
+      target: customers.receitaMediaAssociadoTarget,
+      prefix: 'R$',
+      status: customers.receitaMediaAssociado >= customers.receitaMediaAssociadoTarget * 0.85 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: R$ ${customers.receitaMediaAssociadoTarget}`,
+    },
+  ];
+
+  // Classificação de associados baseada nos dados reais
+  const memberClassification = [
+    { name: 'Promotores (Verde)', value: customers.zonaVerde, color: 'hsl(142, 71%, 45%)' },
+    { name: 'Neutros/Risco (Amarelo)', value: customers.zonaAmarela, color: 'hsl(38, 92%, 50%)' },
+    { name: 'Detratores (Vermelho)', value: customers.zonaVermelha, color: 'hsl(0, 84%, 60%)' },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Carregando dados de clientes...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -85,7 +89,7 @@ export function CustomersView() {
         <p className="text-muted-foreground mt-1">Experiência do associado, NPS e fidelização</p>
       </div>
 
-      {/* KPIs Grid - 3 colunas para melhor visualização */}
+      {/* KPIs Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {customerKPIs.map((kpi, index) => (
           <KPICard key={kpi.id} data={kpi} delay={index * 100} />
@@ -109,7 +113,7 @@ export function CustomersView() {
                   outerRadius={90}
                   paddingAngle={4}
                   dataKey="value"
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                   labelLine={false}
                 >
                   {memberClassification.map((entry, index) => (
@@ -152,50 +156,50 @@ export function CustomersView() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">NPS Geral</span>
-                <span className="text-sm text-muted-foreground">88% / 95%</span>
+                <span className="text-sm text-muted-foreground">{customers.nps}% / {customers.npsTarget}%</span>
               </div>
               <div className="progress-bar">
-                <div className="progress-bar-fill warning" style={{ width: '92%' }} />
+                <div className="progress-bar-fill warning" style={{ width: `${(customers.nps / customers.npsTarget) * 100}%` }} />
               </div>
             </div>
             
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">FCR</span>
-                <span className="text-sm text-muted-foreground">78% / 85%</span>
+                <span className="text-sm text-muted-foreground">{customers.fcr}% / {customers.fcrTarget}%</span>
               </div>
               <div className="progress-bar">
-                <div className="progress-bar-fill warning" style={{ width: '92%' }} />
+                <div className="progress-bar-fill warning" style={{ width: `${(customers.fcr / customers.fcrTarget) * 100}%` }} />
               </div>
             </div>
             
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Redução Cancelamento</span>
-                <span className="text-sm text-muted-foreground">-8% / -20%</span>
+                <span className="text-sm text-muted-foreground">{customers.churn}% / {customers.churnTarget}%</span>
               </div>
               <div className="progress-bar">
-                <div className="progress-bar-fill danger" style={{ width: '40%' }} />
+                <div className={`progress-bar-fill ${customers.churn <= customers.churnTarget ? 'success' : 'danger'}`} style={{ width: `${Math.min((customers.churnTarget / customers.churn) * 100, 100)}%` }} />
               </div>
             </div>
             
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Tempo Médio Associação</span>
-                <span className="text-sm text-muted-foreground">14m / 18m</span>
+                <span className="text-sm text-muted-foreground">{customers.tempoMedioAssociacao}m / {customers.tempoMedioAssociacaoTarget}m</span>
               </div>
               <div className="progress-bar">
-                <div className="progress-bar-fill warning" style={{ width: '78%' }} />
+                <div className="progress-bar-fill warning" style={{ width: `${(customers.tempoMedioAssociacao / customers.tempoMedioAssociacaoTarget) * 100}%` }} />
               </div>
             </div>
             
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Ticket Médio</span>
-                <span className="text-sm text-muted-foreground">R$ 5.050 / R$ 5.960</span>
+                <span className="text-sm font-medium">Receita Média/Associado</span>
+                <span className="text-sm text-muted-foreground">R$ {customers.receitaMediaAssociado} / R$ {customers.receitaMediaAssociadoTarget}</span>
               </div>
               <div className="progress-bar">
-                <div className="progress-bar-fill warning" style={{ width: '85%' }} />
+                <div className="progress-bar-fill warning" style={{ width: `${(customers.receitaMediaAssociado / customers.receitaMediaAssociadoTarget) * 100}%` }} />
               </div>
             </div>
           </div>

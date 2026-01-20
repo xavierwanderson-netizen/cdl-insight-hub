@@ -1,4 +1,4 @@
-import { Menu, Bell, Settings, ChevronDown, Calendar, Filter, RefreshCw } from 'lucide-react';
+import { Menu, Bell, Settings, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -8,13 +8,35 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
+const monthNames: Record<string, string> = {
+  all: 'Todos os meses',
+  jan: 'Janeiro',
+  fev: 'Fevereiro',
+  mar: 'Março',
+  abr: 'Abril',
+  mai: 'Maio',
+  jun: 'Junho',
+  jul: 'Julho',
+  ago: 'Agosto',
+  set: 'Setembro',
+  out: 'Outubro',
+  nov: 'Novembro',
+  dez: 'Dezembro',
+};
+
 export function Header({ onMenuClick }: HeaderProps) {
-  const { year, setYear, month, setMonth } = useDashboard();
+  const { year, setYear, month, setMonth, isLoading } = useDashboard();
+  const queryClient = useQueryClient();
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
@@ -42,7 +64,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Select>
             
             <Select value={month} onValueChange={(value) => setMonth(value as any)}>
-              <SelectTrigger className="w-32 h-9">
+              <SelectTrigger className="w-36 h-9">
                 <SelectValue placeholder="Mês" />
               </SelectTrigger>
               <SelectContent>
@@ -61,17 +83,23 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <SelectItem value="dez">Dezembro</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Button variant="outline" size="sm" className="h-9 gap-2">
-              <Filter className="w-4 h-4" />
-              Filtros
-            </Button>
+
+            {/* Indicador do período selecionado */}
+            <div className="px-3 py-1.5 bg-primary/10 rounded-md text-sm font-medium text-primary">
+              {year} • {monthNames[month]}
+            </div>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <RefreshCw className="w-5 h-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           
           <Button variant="ghost" size="icon" className="relative">
