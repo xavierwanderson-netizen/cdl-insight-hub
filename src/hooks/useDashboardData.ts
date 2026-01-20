@@ -12,16 +12,16 @@ import {
 } from '@/services/dataAdapters';
 import type { ServiceData, FinancialData, RevenueEvolutionData, CaptacaoData, CustomerData, PeopleData, ESGData, ProcessesData } from '@/data/types';
 
-// Stale time: 30 seconds - data updates frequently during dev
-const STALE_TIME = 30 * 1000;
+// Stale time: 5 minutos - dados mudam poucas vezes ao dia
+const STALE_TIME = 5 * 60 * 1000;
 
-// Refetch interval: 30 seconds - polling automático (mais frequente)
-const REFETCH_INTERVAL = 30 * 1000;
+// Refetch interval: 5 minutos - polling otimizado para economia de requisições
+const REFETCH_INTERVAL = 5 * 60 * 1000;
 
 // Retry configuration
 const RETRY_CONFIG = {
-  retry: 3,
-  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  retry: 2,
+  retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
 };
 
 // Hook para buscar dados brutos das planilhas
@@ -36,47 +36,29 @@ export function useSheetData(sheetId: string, gid: number = 0) {
   });
 }
 
-// Hook para buscar dados de serviços
+// Hook para buscar dados de serviços (query única otimizada)
 export function useServicesData(year: '2025' | '2026') {
-  const query2025 = useQuery({
-    queryKey: ['sheet', SHEET_IDS.SERVICOS_2025_2026],
-    queryFn: () => {
-      console.log('[Services 2025] Iniciando fetch...');
-      return fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
-    },
+  const query = useQuery({
+    queryKey: ['sheet-services', SHEET_IDS.SERVICOS_2025_2026],
+    queryFn: () => fetchSheetData(SHEET_IDS.SERVICOS_2025_2026),
     staleTime: STALE_TIME,
     refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
     ...RETRY_CONFIG,
   });
-
-  const query2026 = useQuery({
-    queryKey: ['sheet', SHEET_IDS.SERVICOS_2025_2026],
-    queryFn: () => {
-      console.log('[Services 2026] Iniciando fetch...');
-      return fetchSheetData(SHEET_IDS.SERVICOS_2025_2026);
-    },
-    staleTime: STALE_TIME,
-    refetchInterval: REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
-    ...RETRY_CONFIG,
-  });
-
-  const isLoading = query2025.isLoading || query2026.isLoading;
-  const isError = query2025.isError && query2026.isError;
 
   // Use parsed data with fallback to pre-extracted data
   const services: ServiceData[] = parseServicesData(
-    query2025.data || [], 
-    query2026.data || [], 
+    query.data || [], 
+    query.data || [], 
     year
   );
 
   return {
     data: services,
-    isLoading,
-    isError,
-    error: query2025.error || query2026.error,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
   };
 }
 

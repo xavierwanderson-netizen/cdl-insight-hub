@@ -13,11 +13,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-chart-1" />
-            <span className="text-muted-foreground">Target 2026</span>
+            <span className="text-muted-foreground">Meta 2026</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-chart-2" />
-            <span className="text-muted-foreground">Realized 2025</span>
+            <span className="text-muted-foreground">Realizado 2025</span>
           </div>
         </div>
       </div>
@@ -48,14 +48,14 @@ export function RevenueChart({ data }: RevenueChartProps) {
             />
             <Bar 
               dataKey="target2026" 
-              name="Target 2026"
+              name="Meta 2026"
               fill="hsl(var(--chart-1))"
               radius={[4, 4, 0, 0]}
               opacity={0.3}
             />
             <Bar 
               dataKey="realized2025" 
-              name="Realized 2025"
+              name="Realizado 2025"
               fill="hsl(var(--chart-2))"
               radius={[4, 4, 0, 0]}
             />
