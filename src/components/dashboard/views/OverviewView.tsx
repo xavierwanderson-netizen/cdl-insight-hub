@@ -108,12 +108,12 @@ export function OverviewView() {
     { id: 'bi', name: 'BI Executivo', progress: 20, status: 'danger' as StatusType },
   ];
 
-  // Converter revenueData para formato do gráfico
+  // Converter revenueData para formato do gráfico - usar nomes corretos
   const revenueEvolutionChart = revenueData.map(item => ({
     month: item.shortMonth,
-    realizado2025: item.realized2025,
-    meta2026: item.target2026,
-    realizado2026: item.realized2026,
+    realized2025: item.realized2025,
+    target2026: item.target2026,
+    realized2026: item.realized2026,
   }));
 
   if (isLoading) {
