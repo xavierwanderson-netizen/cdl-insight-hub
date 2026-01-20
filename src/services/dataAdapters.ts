@@ -629,8 +629,20 @@ export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionDa
       const monthIndex = MONTHS_FULL.findIndex(m => monthName.toLowerCase().includes(m.toLowerCase()));
       
       if (monthIndex >= 0) {
-        const realized2025 = parseCurrency(row[1]) || defaults[monthIndex].realized2025;
+        // Coluna 1: Realizado_2025 - pode vir como número puro (1925870.41) ou moeda (R$ 1.925.870,41)
+        let realized2025 = 0;
+        const val2025 = row[1]?.trim() || '';
+        if (val2025.includes('R$') || val2025.includes(',')) {
+          realized2025 = parseCurrency(val2025);
+        } else {
+          realized2025 = parseFloat(val2025) || 0;
+        }
+        if (realized2025 === 0) realized2025 = defaults[monthIndex].realized2025;
+        
+        // Coluna 2: Meta_2026 - geralmente vem como moeda
         const target2026 = parseCurrency(row[2]) || defaults[monthIndex].target2026;
+        
+        // Coluna 3: Realizado_2026 - geralmente vem como moeda
         const realized2026 = row.length > 3 ? parseCurrency(row[3]) || 0 : 0;
         
         result.push({
@@ -654,7 +666,8 @@ export function parseRevenueEvolution(data: string[][] = []): RevenueEvolutionDa
 
 // Parse captação data
 export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []): CaptacaoData {
-  // Estrutura esperada da planilha FUNIL: Estágio | Quantidade | Meta | Percentual | Cor_Hex
+  // Estrutura da planilha FUNIL: Estágio | Quantidade | Meta | Realizado_2026 | Percentual | Cor_Hex
+  // Exemplo: Leads,7046,2500,,282%,#1F3A93
   
   const defaults2025 = {
     leads: 2000,
@@ -682,46 +695,57 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
     taxaConversaoTarget: 20.0,
   };
   
-  const defaults = year === '2025' ? defaults2025 : defaults2026;
+  const result = year === '2025' ? { ...defaults2025 } : { ...defaults2026 };
   
   // Try to parse from Google Sheets
   if (data && data.length > 1) {
     try {
-      console.log(`[parseCaptacaoData] Parseando dados de funil para ${year}`);
+      console.log(`[parseCaptacaoData] Parseando dados de funil para ${year}, ${data.length} linhas`);
+      console.log(`[parseCaptacaoData] Headers:`, data[0]);
       
       for (let i = 1; i < data.length; i++) {
         const row = data[i];
         if (!row || row.length < 2) continue;
         
-        const stage = row[0]?.toLowerCase() || '';
+        const stage = row[0]?.toLowerCase().trim() || '';
         const quantity = parseNumber(row[1] || '0');
         const meta = parseNumber(row[2] || '0');
         
-        if (stage.includes('lead')) {
-          if (!stage.includes('qualificado')) {
-            defaults.leads = quantity;
-            defaults.leadsTarget = meta;
-          } else {
-            defaults.leadsQualificados = quantity;
-            defaults.leadsQualificadosTarget = meta;
-          }
-        } else if (stage.includes('proposta')) {
-          defaults.propostas = quantity;
-          defaults.propostasTarget = meta;
-        } else if (stage.includes('novo') || stage.includes('conversão') || stage.includes('conversao')) {
-          if (stage.includes('conversão') || stage.includes('conversao')) {
-            // Taxa de conversão (em percentual)
-            defaults.taxaConversao = parsePercent(row[1] || '0');
-            defaults.taxaConversaoTarget = parsePercent(row[2] || '0');
-          } else {
-            // Novos Associados
-            defaults.novosAssociados = quantity;
-            defaults.novosAssociadosTarget = meta;
-          }
+        console.log(`[parseCaptacaoData] Row ${i}: "${stage}" Qtd=${quantity} Meta=${meta}`);
+        
+        // Leads (não qualificados)
+        if (stage === 'leads' || (stage.includes('lead') && !stage.includes('qualificad'))) {
+          result.leads = quantity;
+          result.leadsTarget = meta;
+          console.log(`[parseCaptacaoData] ✓ Leads: ${quantity}/${meta}`);
+        }
+        // Leads Qualificados
+        else if (stage.includes('qualificad')) {
+          result.leadsQualificados = quantity;
+          result.leadsQualificadosTarget = meta;
+          console.log(`[parseCaptacaoData] ✓ Qualificados: ${quantity}/${meta}`);
+        }
+        // Propostas
+        else if (stage.includes('proposta')) {
+          result.propostas = quantity;
+          result.propostasTarget = meta;
+          console.log(`[parseCaptacaoData] ✓ Propostas: ${quantity}/${meta}`);
+        }
+        // Negócios Fechados / Novos Associados
+        else if (stage.includes('negócio') || stage.includes('negocio') || stage.includes('fechado') || stage.includes('novo') || stage.includes('associado')) {
+          result.novosAssociados = quantity;
+          result.novosAssociadosTarget = meta;
+          console.log(`[parseCaptacaoData] ✓ Novos Associados: ${quantity}/${meta}`);
+        }
+        // Taxa de Conversão
+        else if (stage.includes('conversão') || stage.includes('conversao')) {
+          result.taxaConversao = parsePercent(row[1] || '0');
+          result.taxaConversaoTarget = parsePercent(row[2] || '0');
+          console.log(`[parseCaptacaoData] ✓ Taxa Conversão: ${result.taxaConversao}%/${result.taxaConversaoTarget}%`);
         }
       }
       
-      console.log(`[parseCaptacaoData] ✅ Funil parseado: Leads=${defaults.leads}, Qualificados=${defaults.leadsQualificados}`);
+      console.log(`[parseCaptacaoData] ✅ Funil completo:`, result);
     } catch (error) {
       console.error(`[parseCaptacaoData] ❌ Erro ao parsear funil:`, error);
     }
@@ -729,7 +753,7 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
   
   if (year === '2025') {
     return {
-      ...defaults,
+      ...result,
       monthlyData: [
         { month: 'Janeiro', shortMonth: 'Jan', captacao: 60, target: 75 },
         { month: 'Fevereiro', shortMonth: 'Fev', captacao: 70, target: 75 },
@@ -748,7 +772,7 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
   }
   
   return {
-    ...defaults,
+    ...result,
     monthlyData: MONTHS_FULL.map((month, i) => ({
       month,
       shortMonth: MONTHS[i],

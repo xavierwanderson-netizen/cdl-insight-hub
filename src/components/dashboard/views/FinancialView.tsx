@@ -1,95 +1,120 @@
 import { KPICard } from '../KPICard';
 import { OKRCard } from '../OKRCard';
 import { financialOKRs } from '@/data/dashboardData';
-import type { KPIData } from '@/data/dashboardData';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/data/dashboardData';
-
-const financialKPIs: KPIData[] = [
-  {
-    id: 'inadimplencia',
-    label: 'Inadimplência',
-    value: 7.2,
-    target: 6,
-    unit: '%',
-    status: 'danger',
-    trend: 'down',
-    trendValue: '-1.8pp',
-    responsible: 'Karla',
-    description: 'KR1: Reduzir para < 6%',
-  },
-  {
-    id: 'pontualidade',
-    label: 'Pontualidade Pagamento',
-    value: 82,
-    target: 90,
-    unit: '%',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+5pp',
-    responsible: 'Karla',
-    description: 'KR2: Atingir 90%',
-  },
-  {
-    id: 'ebitda',
-    label: 'EBITDA',
-    value: 8.5,
-    target: 10,
-    unit: '%',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+2pp',
-    responsible: 'Karla',
-    description: 'KR3: Atingir 10%',
-  },
-  {
-    id: 'margem-liquida',
-    label: 'Margem Líquida',
-    value: 8,
-    target: 10,
-    unit: '%',
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+1.5pp',
-    responsible: 'Karla',
-    description: 'KR4: Atingir 10%',
-  },
-  {
-    id: 'margem-contribuicao',
-    label: 'Margem de Contribuição',
-    value: 52,
-    target: 55,
-    unit: '%',
-    status: 'success',
-    trend: 'up',
-    trendValue: '+3pp',
-    responsible: 'Karla',
-    description: 'KR5: Atingir 55%',
-  },
-  {
-    id: 'crescimento-receita',
-    label: 'Crescimento Receita',
-    value: 0,
-    target: 12,
-    unit: '%',
-    status: 'warning',
-    trend: 'stable',
-    trendValue: 'A realizar',
-    description: 'KR6: Crescer 12% vs 2025',
-  },
-];
-
-const revenueByService = [
-  { name: 'SPC Brasil', value: 2812486, target: 2812486 },
-  { name: 'CDL Celular', value: 0, target: 1935524 },
-  { name: 'Cert. Digital', value: 0, target: 584164 },
-  { name: 'Escola Neg.', value: 0, target: 364000 },
-  { name: 'SPC Avisa', value: 0, target: 212096 },
-  { name: 'Eventos', value: 0, target: 158400 },
-  { name: 'Cheque Seg.', value: 0, target: 48000 },
-];
+import { useFinancialData, useServicesData } from '@/hooks/useDashboardData';
+import { useDashboard } from '@/contexts/DashboardContext';
+import { Loader2 } from 'lucide-react';
 
 export function FinancialView() {
+  // Obter filtros do contexto
+  const { year } = useDashboard();
+  
+  const { data: financialData, isLoading: loadingFinancial } = useFinancialData();
+  const { data: servicesData, isLoading: loadingServices } = useServicesData(year);
+  
+  const isLoading = loadingFinancial || loadingServices;
+
+  // KPIs dinâmicos baseados nos dados reais
+  const financialKPIs: KPIData[] = [
+    {
+      id: 'inadimplencia',
+      label: 'Inadimplência',
+      value: financialData.inadimplencia,
+      target: financialData.inadimplenciaTarget,
+      unit: '%',
+      status: financialData.inadimplencia > financialData.inadimplenciaTarget ? 'danger' as StatusType : 'success' as StatusType,
+      trend: 'down' as TrendType,
+      trendValue: `-${(financialData.inadimplencia - financialData.inadimplenciaTarget).toFixed(1)}pp`,
+      responsible: 'Karla',
+      description: 'KR1: Reduzir para < 6%',
+    },
+    {
+      id: 'pontualidade',
+      label: 'Pontualidade Pagamento',
+      value: financialData.pontualidade,
+      target: financialData.pontualidadeTarget,
+      unit: '%',
+      status: financialData.pontualidade >= financialData.pontualidadeTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `+${(financialData.pontualidadeTarget - financialData.pontualidade).toFixed(0)}pp`,
+      responsible: 'Karla',
+      description: 'KR2: Atingir 90%',
+    },
+    {
+      id: 'ebitda',
+      label: 'EBITDA',
+      value: financialData.ebitda,
+      target: financialData.ebitdaTarget,
+      unit: '%',
+      status: financialData.ebitda >= financialData.ebitdaTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `+${(financialData.ebitdaTarget - financialData.ebitda).toFixed(1)}pp`,
+      responsible: 'Karla',
+      description: 'KR3: Atingir 10%',
+    },
+    {
+      id: 'margem-liquida',
+      label: 'Margem Líquida',
+      value: financialData.margemLiquida,
+      target: financialData.margemLiquidaTarget,
+      unit: '%',
+      status: financialData.margemLiquida >= financialData.margemLiquidaTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `+${(financialData.margemLiquidaTarget - financialData.margemLiquida).toFixed(1)}pp`,
+      responsible: 'Karla',
+      description: 'KR4: Atingir 10%',
+    },
+    {
+      id: 'margem-contribuicao',
+      label: 'Margem de Contribuição',
+      value: financialData.margemContribuicao,
+      target: financialData.margemContribuicaoTarget,
+      unit: '%',
+      status: financialData.margemContribuicao >= financialData.margemContribuicaoTarget * 0.9 ? 'success' as StatusType : 'warning' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `+${(financialData.margemContribuicaoTarget - financialData.margemContribuicao).toFixed(0)}pp`,
+      responsible: 'Karla',
+      description: 'KR5: Atingir 55%',
+    },
+    {
+      id: 'crescimento-receita',
+      label: 'Crescimento Receita',
+      value: financialData.faturamentoTotal.realized2025 > 0 
+        ? Math.round(((financialData.faturamentoTotal.target2026 - financialData.faturamentoTotal.realized2025) / financialData.faturamentoTotal.realized2025) * 10000) / 100
+        : 0,
+      target: 12,
+      unit: '%',
+      status: 'warning' as StatusType,
+      trend: 'stable' as TrendType,
+      trendValue: 'Meta 2026',
+      description: 'KR6: Crescer 12% vs 2025',
+    },
+  ];
+
+  // Receita por serviço baseado nos dados reais
+  const revenueByService = servicesData
+    .filter(s => s.revenueTarget > 0)
+    .sort((a, b) => b.revenueTarget - a.revenueTarget)
+    .slice(0, 7)
+    .map(service => ({
+      name: service.name.length > 12 ? service.name.substring(0, 10) + '...' : service.name,
+      fullName: service.name,
+      value: service.revenue,
+      target: service.revenueTarget,
+    }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Carregando dados financeiros...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -98,8 +123,8 @@ export function FinancialView() {
         <p className="text-muted-foreground mt-1">OKRs F1, F2 e F3 - Solidez, Faturamento e Eficiência</p>
       </div>
 
-      {/* KPIs Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* KPIs Grid - 3 colunas para melhor visualização */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {financialKPIs.map((kpi, index) => (
           <KPICard key={kpi.id} data={kpi} delay={index * 100} />
         ))}
@@ -131,7 +156,11 @@ export function FinancialView() {
                   width={65}
                 />
                 <Tooltip 
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number, name: string) => [formatCurrency(value), name === 'target' ? 'Meta' : 'Realizado']}
+                  labelFormatter={(label) => {
+                    const item = revenueByService.find(r => r.name === label);
+                    return item?.fullName || label;
+                  }}
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
@@ -186,10 +215,10 @@ export function FinancialView() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Integrações Sistêmicas</span>
-                <span className="text-sm text-muted-foreground">0 / 5 ações</span>
+                <span className="text-sm text-muted-foreground">2 / 5 ações</span>
               </div>
               <div className="progress-bar">
-                <div className="progress-bar-fill warning" style={{ width: '0%' }} />
+                <div className="progress-bar-fill warning" style={{ width: '40%' }} />
               </div>
               <p className="text-xs text-muted-foreground mt-1">KR10: SAP, CRM, BI, Automações</p>
             </div>

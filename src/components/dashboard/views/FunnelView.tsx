@@ -1,51 +1,12 @@
 import { FunnelChart } from '../FunnelChart';
-import { salesFunnel, captureByChannel } from '@/data/dashboardData';
 import { KPICard } from '../KPICard';
+import type { StatusType, TrendType } from '@/data/dashboardData';
 import type { KPIData } from '@/data/dashboardData';
+import type { FunnelStage } from '@/data/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
-const funnelKPIs: KPIData[] = [
-  {
-    id: 'taxa-conversao',
-    label: 'Taxa de Conversão',
-    value: 4,
-    target: 20,
-    unit: '%',
-    status: 'danger',
-    trend: 'up',
-    trendValue: '+1pp',
-    description: 'KR20: Meta 20%',
-  },
-  {
-    id: 'captacao-mensal',
-    label: 'Captação Mensal',
-    value: 50,
-    target: 100,
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+15',
-    description: 'Novos associados/mês',
-  },
-  {
-    id: 'leads-qualificados',
-    label: 'Leads Qualificados',
-    value: 625,
-    target: 1000,
-    status: 'warning',
-    trend: 'up',
-    trendValue: '+25%',
-  },
-  {
-    id: 'captacao-spc',
-    label: 'Captação SPC Brasil',
-    value: 0,
-    target: 10,
-    status: 'danger',
-    trend: 'stable',
-    trendValue: 'A iniciar',
-    description: 'KR33: Mín. 10/mês',
-  },
-];
+import { useCaptacaoData } from '@/hooks/useDashboardData';
+import { useDashboard } from '@/contexts/DashboardContext';
+import { Loader2 } from 'lucide-react';
 
 const channelColors = [
   'hsl(222, 65%, 35%)',
@@ -56,6 +17,82 @@ const channelColors = [
 ];
 
 export function FunnelView() {
+  // Obter filtros do contexto
+  const { year } = useDashboard();
+  
+  const { data: captacaoData, isLoading } = useCaptacaoData(year);
+
+  // KPIs dinâmicos baseados nos dados reais de captação
+  const funnelKPIs: KPIData[] = [
+    {
+      id: 'taxa-conversao',
+      label: 'Taxa de Conversão',
+      value: captacaoData.taxaConversao,
+      target: captacaoData.taxaConversaoTarget,
+      unit: '%',
+      status: captacaoData.taxaConversao >= captacaoData.taxaConversaoTarget ? 'success' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: captacaoData.taxaConversao > 0 ? `${captacaoData.taxaConversao.toFixed(0)}%` : 'A iniciar',
+      description: 'KR20: Meta 20%',
+    },
+    {
+      id: 'captacao-mensal',
+      label: 'Novos Associados',
+      value: captacaoData.novosAssociados,
+      target: captacaoData.novosAssociadosTarget,
+      status: captacaoData.novosAssociados >= captacaoData.novosAssociadosTarget * 0.5 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: ${captacaoData.novosAssociadosTarget}`,
+      description: 'Captação 2026',
+    },
+    {
+      id: 'leads-qualificados',
+      label: 'Leads Qualificados',
+      value: captacaoData.leadsQualificados,
+      target: captacaoData.leadsQualificadosTarget,
+      status: captacaoData.leadsQualificados >= captacaoData.leadsQualificadosTarget * 0.5 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: ${captacaoData.leadsQualificadosTarget}`,
+    },
+    {
+      id: 'leads-total',
+      label: 'Total de Leads',
+      value: captacaoData.leads,
+      target: captacaoData.leadsTarget,
+      status: captacaoData.leads >= captacaoData.leadsTarget * 0.5 ? 'warning' as StatusType : 'danger' as StatusType,
+      trend: 'up' as TrendType,
+      trendValue: `Meta: ${captacaoData.leadsTarget}`,
+      description: 'Entrada do funil',
+    },
+  ];
+
+  // Funil de vendas dinâmico - percentual calculado sobre o total de leads
+  const leadsTotal = captacaoData.leads || 1; // Evita divisão por zero
+  const salesFunnel: FunnelStage[] = [
+    { id: 'leads', name: 'Leads', value: captacaoData.leads, target: captacaoData.leadsTarget, percentage: 100, color: 'hsl(222, 65%, 35%)' },
+    { id: 'qualificados', name: 'Qualificados', value: captacaoData.leadsQualificados, target: captacaoData.leadsQualificadosTarget, percentage: (captacaoData.leadsQualificados / leadsTotal) * 100, color: 'hsl(38, 92%, 50%)' },
+    { id: 'propostas', name: 'Propostas', value: captacaoData.propostas, target: captacaoData.propostasTarget, percentage: (captacaoData.propostas / leadsTotal) * 100, color: 'hsl(142, 71%, 45%)' },
+    { id: 'novos', name: 'Novos Associados', value: captacaoData.novosAssociados, target: captacaoData.novosAssociadosTarget, percentage: (captacaoData.novosAssociados / leadsTotal) * 100, color: 'hsl(262, 80%, 55%)' },
+  ];
+
+  // Captação por canal (dados estáticos por enquanto - pode ser conectado a planilha futura)
+  const captureByChannel = [
+    { channel: 'Eventos', value: 120, target: 180 },
+    { channel: 'Indicação', value: 150, target: 200 },
+    { channel: 'SPC', value: 80, target: 120 },
+    { channel: 'Campanhas', value: 100, target: 150 },
+    { channel: 'Outros', value: 115, target: 214 },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Carregando dados do funil...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -110,14 +147,14 @@ export function FunnelView() {
           
           <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
             <div>
-              <p className="text-sm text-muted-foreground">Conversão Eventos</p>
-              <p className="text-xl font-bold font-display">25%</p>
-              <p className="text-xs text-muted-foreground">Meta: 25%</p>
+              <p className="text-sm text-muted-foreground">Taxa Conversão Geral</p>
+              <p className="text-xl font-bold font-display">{captacaoData.taxaConversao.toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground">Meta: {captacaoData.taxaConversaoTarget}%</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Conversão Indicação</p>
-              <p className="text-xl font-bold font-display">30%</p>
-              <p className="text-xs text-muted-foreground">Meta: 30%</p>
+              <p className="text-sm text-muted-foreground">Propostas Enviadas</p>
+              <p className="text-xl font-bold font-display">{captacaoData.propostas}</p>
+              <p className="text-xs text-muted-foreground">Meta: {captacaoData.propostasTarget}</p>
             </div>
           </div>
         </div>
@@ -130,12 +167,12 @@ export function FunnelView() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             { id: 'kr28', desc: 'Mapear e documentar 100% do funil', target: '100%', current: '30%', status: 'warning' },
-            { id: 'kr29', desc: 'Taxa de conversão de leads 20%', target: '20%', current: '4%', status: 'danger' },
+            { id: 'kr29', desc: `Taxa de conversão de leads ${captacaoData.taxaConversaoTarget}%`, target: `${captacaoData.taxaConversaoTarget}%`, current: `${captacaoData.taxaConversao.toFixed(0)}%`, status: captacaoData.taxaConversao >= captacaoData.taxaConversaoTarget ? 'success' : 'danger' },
             { id: 'kr30', desc: 'Automação de nutrição para 100% leads', target: '100%', current: '0%', status: 'danger' },
             { id: 'kr31', desc: 'Converter 25% dos leads de eventos', target: '25%', current: '20%', status: 'warning' },
             { id: 'kr32', desc: 'Converter 30% leads por indicação', target: '30%', current: '25%', status: 'warning' },
             { id: 'kr34', desc: 'Crescer base NDL Aparecida em 20%', target: '20%', current: '5%', status: 'danger' },
-          ].map((kr, index) => (
+          ].map((kr) => (
             <div 
               key={kr.id}
               className="p-4 bg-muted/30 rounded-lg"

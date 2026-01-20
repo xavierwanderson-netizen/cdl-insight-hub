@@ -15,7 +15,7 @@ export function formatNumber(value: number): string {
 }
 
 export function formatPercent(value: number): string {
-  return `${value.toFixed(1)}%`;
+  return `${value.toFixed(2).replace('.', ',')}%`;
 }
 
 export function calculateStatus(current: number, target: number, inverse: boolean = false): StatusType {
