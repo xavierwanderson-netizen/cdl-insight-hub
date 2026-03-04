@@ -99,20 +99,21 @@ export function parseCertificadoDigital(data2025: string[][], data2026: string[]
   };
 }
 
-// Parse services from Google Sheets data - Nova estrutura 2026
+// Parse services from Google Sheets data - Estrutura: Serviço | Jan_Qtd | Jan_Fat | Fev_Qtd | Fev_Fat | ... | Total_Qtd | Total_Fat
 function parseServicesFromSheets(data: string[][], year: '2025' | '2026'): ServiceData[] {
   const services: ServiceData[] = [];
   
   console.log(`[parseServicesFromSheets] Parseando dados de ${year}: ${data.length} linhas`);
-  if (data.length > 0) {
-    console.log(`[parseServicesFromSheets] Headers:`, data[0]);
-  }
   
   // Pula linha de header
   if (data.length < 2) return services;
   
   const headers = data[0].map(h => h.toLowerCase().trim());
-  console.log(`[parseServicesFromSheets] Headers processados:`, headers);
+  console.log(`[parseServicesFromSheets] Headers:`, headers);
+  
+  // Detectar índice de Total_Qtd e Total_Faturamento
+  const totalQtdIdx = headers.findIndex(h => h.includes('total_qtd') || h.includes('total qtd'));
+  const totalFatIdx = headers.findIndex(h => h.includes('total_faturamento') || h.includes('total fat'));
   
   // Processa cada serviço (uma linha por serviço)
   for (let i = 1; i < data.length; i++) {
@@ -120,63 +121,42 @@ function parseServicesFromSheets(data: string[][], year: '2025' | '2026'): Servi
     if (!row || row.length < 2) continue;
     
     const serviceName = row[0] ? row[0].trim() : '';
-    
-    // Ignora linhas vazias
-    if (!serviceName || serviceName === '') {
-      continue;
-    }
+    if (!serviceName || serviceName === '' || serviceName.toLowerCase() === 'total') continue;
     
     let totalQuantity = 0;
     let totalRevenue = 0;
-    let totalQuantityTarget = 0;
-    let totalRevenueTarget = 0;
     const monthlyData: MonthlyData[] = [];
     
-    // Estrutura: Serviço | Jan_Qtd | Jan_Fat | Jan_Real_Qtd | Jan_Real_Fat | Fev_Qtd | Fev_Fat | Fev_Real_Qtd | Fev_Real_Fat | ...
-    // Padrão por mês: [Qtd, Fat, Real_Qtd, Real_Fat] = 4 colunas por mês
-    
+    // Estrutura real: 2 colunas por mês (Qtd, Faturamento)
     for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-      // Para cada mês, temos 4 colunas: Qtd(meta), Fat(meta), Real_Qtd, Real_Fat
-      const baseCol = 1 + (monthIndex * 4); // Começa na coluna 1 (0=Serviço)
+      const baseCol = 1 + (monthIndex * 2); // 2 colunas por mês
       
-      const metaQtd = parseNumber(row[baseCol] || '0');
-      const metaFat = parseCurrency(row[baseCol + 1] || '0');
-      const realQtd = parseNumber(row[baseCol + 2] || '0');
-      const realFat = parseCurrency(row[baseCol + 3] || '0');
+      if (baseCol + 1 >= row.length) break;
       
-      // Se não há dados, para de processar meses
-      if (baseCol + 3 >= row.length) break;
-      
-      // Para 2026, usa dados reais; para 2025, usa meta como realizado
-      let quantity = 0;
-      let revenue = 0;
-      let quantityTarget = 0;
-      let revenueTarget = 0;
-      
-      if (year === '2026') {
-        quantity = realQtd;
-        revenue = realFat;
-        quantityTarget = metaQtd;
-        revenueTarget = metaFat;
-      } else {
-        // Para 2025, as colunas meta são na verdade realizadas
-        quantity = metaQtd;
-        revenue = metaFat;
-      }
+      const quantity = parseNumber(row[baseCol] || '0');
+      const revenue = parseCurrency(row[baseCol + 1] || '0');
       
       totalQuantity += quantity;
       totalRevenue += revenue;
-      totalQuantityTarget += quantityTarget;
-      totalRevenueTarget += revenueTarget;
       
       monthlyData.push({
         month: MONTHS_FULL[monthIndex],
         shortMonth: MONTHS[monthIndex],
         quantity,
-        quantityTarget,
+        quantityTarget: 0,
         revenue,
-        revenueTarget,
+        revenueTarget: 0,
       });
+    }
+    
+    // Se tem colunas de Total, usa elas (mais preciso)
+    if (totalQtdIdx > 0 && totalQtdIdx < row.length) {
+      const sheetTotal = parseNumber(row[totalQtdIdx] || '0');
+      if (sheetTotal > 0) totalQuantity = sheetTotal;
+    }
+    if (totalFatIdx > 0 && totalFatIdx < row.length) {
+      const sheetTotal = parseCurrency(row[totalFatIdx] || '0');
+      if (sheetTotal > 0) totalRevenue = sheetTotal;
     }
     
     const ticketMedio = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
@@ -185,16 +165,16 @@ function parseServicesFromSheets(data: string[][], year: '2025' | '2026'): Servi
       id: serviceName.toLowerCase().replace(/\s+/g, '-'),
       name: serviceName,
       quantity: totalQuantity,
-      quantityTarget: totalQuantityTarget,
+      quantityTarget: 0,
       revenue: totalRevenue,
-      revenueTarget: totalRevenueTarget,
+      revenueTarget: 0,
       ticketMedio,
-      status: calculateStatus(totalRevenue, totalRevenueTarget),
+      status: 'warning',
       monthlyData,
     };
     
     services.push(service);
-    console.log(`[parseServicesFromSheets] ✅ ${serviceName}: Qtd=${totalQuantity}, Fat=R$ ${totalRevenue}`);
+    console.log(`[parseServicesFromSheets] ✅ ${serviceName}: Qtd=${totalQuantity}, Fat=R$ ${totalRevenue.toFixed(2)}`);
   }
   
   return services;
@@ -698,10 +678,10 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
   const result = year === '2025' ? { ...defaults2025 } : { ...defaults2026 };
   
   // Try to parse from Google Sheets
+  // Estrutura: Estágio | Quantidade | Meta | Realizado_2026 | Percentual | Cor_Hex
   if (data && data.length > 1) {
     try {
       console.log(`[parseCaptacaoData] Parseando dados de funil para ${year}, ${data.length} linhas`);
-      console.log(`[parseCaptacaoData] Headers:`, data[0]);
       
       for (let i = 1; i < data.length; i++) {
         const row = data[i];
@@ -710,38 +690,29 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
         const stage = row[0]?.toLowerCase().trim() || '';
         const quantity = parseNumber(row[1] || '0');
         const meta = parseNumber(row[2] || '0');
+        const realizado2026 = parseNumber(row[3] || '0');
         
-        console.log(`[parseCaptacaoData] Row ${i}: "${stage}" Qtd=${quantity} Meta=${meta}`);
+        // Para 2026, prioriza Realizado_2026 (col 3); para 2025 usa Quantidade (col 1)
+        const value = year === '2026' ? realizado2026 : quantity;
+        const target = meta;
         
-        // Leads (não qualificados)
+        console.log(`[parseCaptacaoData] Row ${i}: "${stage}" Valor=${value} Meta=${target}`);
+        
         if (stage === 'leads' || (stage.includes('lead') && !stage.includes('qualificad'))) {
-          result.leads = quantity;
-          result.leadsTarget = meta;
-          console.log(`[parseCaptacaoData] ✓ Leads: ${quantity}/${meta}`);
-        }
-        // Leads Qualificados
-        else if (stage.includes('qualificad')) {
-          result.leadsQualificados = quantity;
-          result.leadsQualificadosTarget = meta;
-          console.log(`[parseCaptacaoData] ✓ Qualificados: ${quantity}/${meta}`);
-        }
-        // Propostas
-        else if (stage.includes('proposta')) {
-          result.propostas = quantity;
-          result.propostasTarget = meta;
-          console.log(`[parseCaptacaoData] ✓ Propostas: ${quantity}/${meta}`);
-        }
-        // Negócios Fechados / Novos Associados
-        else if (stage.includes('negócio') || stage.includes('negocio') || stage.includes('fechado') || stage.includes('novo') || stage.includes('associado')) {
-          result.novosAssociados = quantity;
-          result.novosAssociadosTarget = meta;
-          console.log(`[parseCaptacaoData] ✓ Novos Associados: ${quantity}/${meta}`);
-        }
-        // Taxa de Conversão
-        else if (stage.includes('conversão') || stage.includes('conversao')) {
-          result.taxaConversao = parsePercent(row[1] || '0');
+          result.leads = value;
+          result.leadsTarget = target;
+        } else if (stage.includes('qualificad')) {
+          result.leadsQualificados = value;
+          result.leadsQualificadosTarget = target;
+        } else if (stage.includes('proposta')) {
+          result.propostas = value;
+          result.propostasTarget = target;
+        } else if (stage.includes('negócio') || stage.includes('negocio') || stage.includes('fechado')) {
+          result.novosAssociados = value;
+          result.novosAssociadosTarget = target;
+        } else if (stage.includes('conversão') || stage.includes('conversao')) {
+          result.taxaConversao = parsePercent(year === '2026' ? (row[3] || '0') : (row[1] || '0'));
           result.taxaConversaoTarget = parsePercent(row[2] || '0');
-          console.log(`[parseCaptacaoData] ✓ Taxa Conversão: ${result.taxaConversao}%/${result.taxaConversaoTarget}%`);
         }
       }
       
@@ -782,9 +753,9 @@ export function parseCaptacaoData(year: '2025' | '2026', data: string[][] = []):
   };
 }
 
-// Parse customer data
+// Parse customer data - lê NPS e Base Associados da planilha KPIs
 export function parseCustomerData(data: string[][] = []): CustomerData {
-  return {
+  const defaults: CustomerData = {
     nps: 78,
     npsTarget: 95,
     fcr: 72,
@@ -799,6 +770,28 @@ export function parseCustomerData(data: string[][] = []): CustomerData {
     zonaAmarela: 35,
     zonaVermelha: 20,
   };
+  
+  if (!data || data.length === 0) return defaults;
+  
+  try {
+    const result = { ...defaults };
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length < 2) continue;
+      const label = row[0]?.toLowerCase() || '';
+      
+      if (label.includes('nps')) {
+        result.nps = parseNumber(row[1]) || parsePercent(row[1]) || defaults.nps;
+        result.npsTarget = parseNumber(row[2]) || parsePercent(row[2]) || defaults.npsTarget;
+      } else if (label.includes('base associados') || label.includes('associados')) {
+        result.receitaMediaAssociado = parseNumber(row[1]) || defaults.receitaMediaAssociado;
+        result.receitaMediaAssociadoTarget = parseNumber(row[2]) || defaults.receitaMediaAssociadoTarget;
+      }
+    }
+    return result;
+  } catch {
+    return defaults;
+  }
 }
 
 // Parse people data
