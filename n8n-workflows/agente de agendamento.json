@@ -330,6 +330,59 @@
           "name": "Gmail account"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook Normalizer - normaliza Telegram e WhatsApp\n// Ver utils/webhook-normalizer.js para lógica completa\nconst data = $input.all().json;\nlet normalized;\n\nif (data.message && data.update_id) {\n  normalized = {\n    source: 'telegram',\n    user_id: String(data.message.from?.id || data.message.chat.id),\n    user_name: data.message.from?.first_name || 'Unknown',\n    message_text: data.message.text,\n    timestamp: data.message.date,\n    channel_id: String(data.message.chat.id),\n    chat_id: String(data.message.chat.id),\n    cliente_id: $input.all().json.query?.cliente,\n    canal: 'telegram'\n  };\n} else if (data.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {\n  const msg = data.entry[0].changes[0].value.messages[0];\n  normalized = {\n    source: 'whatsapp',\n    user_id: msg.from,\n    user_name: data.entry[0].changes[0].value.contacts?.[0]?.profile?.name || msg.from,\n    message_text: msg.text.body,\n    timestamp: parseInt(msg.timestamp),\n    channel_id: data.entry[0].changes[0].value.metadata?.phone_number_id,\n    chat_id: msg.from,\n    cliente_id: $input.all().json.query?.cliente || $input.all().json.body?.instance,\n    canal: 'whatsapp'\n  };\n}\n\nif (!normalized) throw new Error('Webhook normalization failed');\nreturn [{ json: normalized }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -128
+      ],
+      "id": "c832e247-8a57-4fca-930d-7909c5517327",
+      "name": "Webhook Normalizer"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Global Error Handler\nconst data = $input.all().json;\nif (data.error) {\n  const messages = {\n    AI_TIMEOUT: 'Desculpe, estou processando. Tente novamente em alguns segundos.',\n    AI_ERROR: 'Tenho uma dificuldade. Um agente entrará em contato.',\n    DB_ERROR: 'Não consegui salvar. Tente novamente.',\n    DEFAULT: 'Algo deu errado. Nossa equipe foi notificada.'\n  };\n  return [{ json: {\n    fallback: messages[data.error.type] || messages.DEFAULT,\n    logged: true\n  }}];\n}\nreturn [$input.all()];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        100
+      ],
+      "id": "f2f863f3-328a-4df6-b345-76e38346fb2a",
+      "name": "Error Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Channel Validator\nconst data = $input.all().json;\nconst errors = [];\n\nif (data.canal === 'telegram') {\n  if (!data.chat_id) errors.push('Missing Telegram chat_id');\n  if (!data.message_text) errors.push('Missing message text');\n} else if (data.canal === 'whatsapp') {\n  if (!data.user_id || !/^\\d{10,15}$/.test(data.user_id)) errors.push('Invalid WhatsApp number');\n  if (!data.message_text) errors.push('Missing message text');\n}\n\nif (data.message_text?.includes('exec(') || data.message_text?.includes('eval(')) {\n  errors.push('Security: Code injection detected');\n}\n\nif (errors.length > 0) {\n  throw new Error('VALIDATION_ERROR: ' + errors.join(' | '));\n}\n\nreturn [$input.all()];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        50
+      ],
+      "id": "94a2373e-f196-45de-8475-324f1cdb4364",
+      "name": "Channel Validator"
+    },
+    {
+      "parameters": {
+        "amount": 3.5,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.2,
+      "position": [
+        3300,
+        304
+      ],
+      "id": "3cdf9a17-dd49-4e0f-82c4-c18a5d988505",
+      "name": "Natural Delay (2-5s)"
     }
   ],
   "pinData": {
@@ -408,18 +461,12 @@
       "main": [
         [
           {
-            "node": "If1",
+            "node": "Error Handler",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
-      "main": [
-        [
+          },
           {
-            "node": "Get many rows",
+            "node": "If1",
             "type": "main",
             "index": 0
           }
@@ -453,7 +500,7 @@
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Webhook Normalizer",
             "type": "main",
             "index": 0
           }
@@ -464,7 +511,7 @@
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Webhook Normalizer",
             "type": "main",
             "index": 0
           }
@@ -521,6 +568,50 @@
           {
             "node": "AI Agent",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Normalizer": {
+      "main": [
+        [
+          {
+            "node": "Channel Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Channel Validator": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Natural Delay (2-5s)": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
             "index": 0
           }
         ]
