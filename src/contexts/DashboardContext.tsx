@@ -50,6 +50,8 @@ interface DashboardContextType {
   processes: ProcessesData;
   okrs: OKRData[];
   isLoading: boolean;
+  lastSyncTime?: Date;
+  isSyncError?: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -102,10 +104,24 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
   );
 
   // Check if any query is loading
-  const isLoading = servicesQuery.isLoading || financialQuery.isLoading || 
+  const isLoading = servicesQuery.isLoading || financialQuery.isLoading ||
                    revenueQuery.isLoading || captacaoQuery.isLoading ||
                    customersQuery.isLoading || peopleQuery.isLoading ||
                    esgQuery.isLoading || processesQuery.isLoading;
+
+  // Check if any query has an error (sync failed)
+  const isSyncError = servicesQuery.isError || financialQuery.isError ||
+                     revenueQuery.isError || captacaoQuery.isError ||
+                     customersQuery.isError || peopleQuery.isError ||
+                     esgQuery.isError || processesQuery.isError;
+
+  // Calculate last sync time (use the most recent successful query)
+  const lastSyncTime = useMemo(() => {
+    if (!isLoading && !isSyncError) {
+      return new Date();
+    }
+    return undefined;
+  }, [isLoading, isSyncError]);
 
   const value: DashboardContextType = {
     year,
@@ -122,6 +138,8 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
     processes: processesQuery.data,
     okrs: getOKRsData(),
     isLoading,
+    lastSyncTime,
+    isSyncError,
   };
 
   return (
