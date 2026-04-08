@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import type { OKRData, StatusType } from '@/data/dashboardData';
+import type { OKRData, StatusType } from '@/domain/types/common';
 
 interface OKRCardProps {
   data: OKRData;

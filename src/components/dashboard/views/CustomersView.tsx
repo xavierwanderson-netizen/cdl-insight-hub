@@ -1,25 +1,73 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { KPICard } from '../KPICard';
-import { OKRCard } from '../OKRCard';
-import { customerOKRs } from '@/data/dashboardData';
-import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
-import { useDashboard } from '@/contexts/DashboardContext';
 import { Loader2 } from 'lucide-react';
+import { useCustomer, useKPIStatus, useKPITrend } from '@/presentation/hooks';
+import type { KPIData, StatusType } from '@/domain/types/common';
 
 export function CustomersView() {
-  const { customers, isLoading } = useDashboard();
+  const { data: customers, isLoading, error } = useCustomer();
 
-  // KPIs dinâmicos baseados nos dados reais da planilha
-  const customerKPIs: KPIData[] = [
+  // Hooks para cálculos de KPI
+  const npsStatus = useKPIStatus(
+    customers?.nps ?? null,
+    customers?.npsTarget ?? null,
+    'customers'
+  );
+  const npsTrend = useKPITrend(
+    customers?.nps ?? null,
+    (customers?.npsTarget ?? 0) * 0.9
+  );
+
+  const fcrStatus = useKPIStatus(
+    customers?.fcr ?? null,
+    customers?.fcrTarget ?? null,
+    'customers'
+  );
+  const fcrTrend = useKPITrend(
+    customers?.fcr ?? null,
+    (customers?.fcrTarget ?? 0) * 0.9
+  );
+
+  const churnStatus = useKPIStatus(
+    customers?.churn ?? null,
+    customers?.churnTarget ?? null,
+    'customers'
+  );
+  const churnTrend = useKPITrend(
+    customers?.churn ?? null,
+    customers?.churnTarget ?? null
+  );
+
+  const tempoStatus = useKPIStatus(
+    customers?.tempoMedioAssociacao ?? null,
+    customers?.tempoMedioAssociacaoTarget ?? null,
+    'customers'
+  );
+  const tempoTrend = useKPITrend(
+    customers?.tempoMedioAssociacao ?? null,
+    (customers?.tempoMedioAssociacaoTarget ?? 0) * 0.8
+  );
+
+  const receitaStatus = useKPIStatus(
+    customers?.receitaMediaAssociado ?? null,
+    customers?.receitaMediaAssociadoTarget ?? null,
+    'customers'
+  );
+  const receitaTrend = useKPITrend(
+    customers?.receitaMediaAssociado ?? null,
+    (customers?.receitaMediaAssociadoTarget ?? 0) * 0.85
+  );
+
+  const customerKPIs: KPIData[] = !customers ? [] : [
     {
       id: 'nps',
       label: 'NPS Geral',
       value: customers.nps,
       target: customers.npsTarget,
       unit: '%',
-      status: customers.nps >= customers.npsTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `Meta: ${customers.npsTarget}%`,
+      status: npsStatus,
+      trend: npsTrend.trend,
+      trendValue: npsTrend.formatted,
       responsible: 'Wanderson',
     },
     {
@@ -28,9 +76,9 @@ export function CustomersView() {
       value: customers.fcr,
       target: customers.fcrTarget,
       unit: '%',
-      status: customers.fcr >= customers.fcrTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `Meta: ${customers.fcrTarget}%`,
+      status: fcrStatus,
+      trend: fcrTrend.trend,
+      trendValue: fcrTrend.formatted,
     },
     {
       id: 'churn',
@@ -38,9 +86,9 @@ export function CustomersView() {
       value: customers.churn,
       target: customers.churnTarget,
       unit: '%',
-      status: customers.churn <= customers.churnTarget ? 'success' as StatusType : 'danger' as StatusType,
-      trend: 'down' as TrendType,
-      trendValue: `Meta: <${customers.churnTarget}%`,
+      status: churnStatus,
+      trend: churnTrend.trend,
+      trendValue: churnTrend.formatted,
       description: 'Reduzir 20% vs 2025',
     },
     {
@@ -49,9 +97,9 @@ export function CustomersView() {
       value: customers.tempoMedioAssociacao,
       target: customers.tempoMedioAssociacaoTarget,
       unit: ' meses',
-      status: customers.tempoMedioAssociacao >= customers.tempoMedioAssociacaoTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `Meta: ${customers.tempoMedioAssociacaoTarget}m`,
+      status: tempoStatus,
+      trend: tempoTrend.trend,
+      trendValue: tempoTrend.formatted,
     },
     {
       id: 'receita-media',
@@ -59,24 +107,34 @@ export function CustomersView() {
       value: customers.receitaMediaAssociado,
       target: customers.receitaMediaAssociadoTarget,
       prefix: 'R$',
-      status: customers.receitaMediaAssociado >= customers.receitaMediaAssociadoTarget * 0.85 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `Meta: R$ ${customers.receitaMediaAssociadoTarget}`,
+      status: receitaStatus,
+      trend: receitaTrend.trend,
+      trendValue: receitaTrend.formatted,
     },
   ];
 
-  // Classificação de associados baseada nos dados reais
-  const memberClassification = [
-    { name: 'Promotores (Verde)', value: customers.zonaVerde, color: 'hsl(142, 71%, 45%)' },
-    { name: 'Neutros/Risco (Amarelo)', value: customers.zonaAmarela, color: 'hsl(38, 92%, 50%)' },
-    { name: 'Detratores (Vermelho)', value: customers.zonaVermelha, color: 'hsl(0, 84%, 60%)' },
-  ];
+  const memberClassification = customers
+    ? [
+        { name: 'Promotores (Verde)', value: customers.zonaVerde, color: 'hsl(142, 71%, 45%)' },
+        { name: 'Neutros/Risco (Amarelo)', value: customers.zonaAmarela, color: 'hsl(38, 92%, 50%)' },
+        { name: 'Detratores (Vermelho)', value: customers.zonaVermelha, color: 'hsl(0, 84%, 60%)' },
+      ]
+    : [];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground">Carregando dados de clientes...</span>
+      </div>
+    );
+  }
+
+  if (error || !customers) {
+    return (
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+        <p className="font-medium">Erro ao carregar dados de clientes</p>
+        <p className="text-sm mt-1">{error?.message || 'Dados não disponíveis'}</p>
       </div>
     );
   }
@@ -148,10 +206,10 @@ export function CustomersView() {
           </div>
         </div>
 
-        {/* NPS Goals Card */}
+        {/* Goals Card */}
         <div className="dashboard-card p-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
           <h3 className="font-display font-semibold text-lg mb-4">Metas de Experiência</h3>
-          
+
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -162,7 +220,7 @@ export function CustomersView() {
                 <div className="progress-bar-fill warning" style={{ width: `${(customers.nps / customers.npsTarget) * 100}%` }} />
               </div>
             </div>
-            
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">FCR</span>
@@ -172,7 +230,7 @@ export function CustomersView() {
                 <div className="progress-bar-fill warning" style={{ width: `${(customers.fcr / customers.fcrTarget) * 100}%` }} />
               </div>
             </div>
-            
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Redução Cancelamento</span>
@@ -182,7 +240,7 @@ export function CustomersView() {
                 <div className={`progress-bar-fill ${customers.churn <= customers.churnTarget ? 'success' : 'danger'}`} style={{ width: `${Math.min((customers.churnTarget / customers.churn) * 100, 100)}%` }} />
               </div>
             </div>
-            
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Tempo Médio Associação</span>
@@ -192,7 +250,7 @@ export function CustomersView() {
                 <div className="progress-bar-fill warning" style={{ width: `${(customers.tempoMedioAssociacao / customers.tempoMedioAssociacaoTarget) * 100}%` }} />
               </div>
             </div>
-            
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Receita Média/Associado</span>
@@ -203,16 +261,6 @@ export function CustomersView() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* OKRs */}
-      <div>
-        <h3 className="font-display font-semibold text-lg mb-4">OKRs - Perspectiva Clientes</h3>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {customerOKRs.map((okr, index) => (
-            <OKRCard key={okr.id} data={okr} delay={index * 100} />
-          ))}
         </div>
       </div>
     </div>

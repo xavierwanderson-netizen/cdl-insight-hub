@@ -1,33 +1,82 @@
 import { KPICard } from '../KPICard';
-import { OKRCard } from '../OKRCard';
-import { financialOKRs } from '@/data/dashboardData';
-import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { formatCurrency } from '@/data/dashboardData';
-import { useFinancialData, useServicesData } from '@/hooks/useDashboardData';
-import { useDashboard } from '@/contexts/DashboardContext';
 import { Loader2 } from 'lucide-react';
+import { useFinancial, useServices, useKPIStatus, useKPITrend } from '@/presentation/hooks';
+import { formatCurrency } from '@/shared/utils/parsing';
+import type { KPIData, StatusType } from '@/domain/types/common';
 
 export function FinancialView() {
-  // Obter filtros do contexto
-  const { year } = useDashboard();
-  
-  const { data: financialData, isLoading: loadingFinancial } = useFinancialData();
-  const { data: servicesData, isLoading: loadingServices } = useServicesData(year);
-  
-  const isLoading = loadingFinancial || loadingServices;
+  const { data: financialData, isLoading: loadingFinancial, error: errorFinancial } = useFinancial();
+  const { data: servicesData, isLoading: loadingServices, error: errorServices } = useServices('2026');
 
-  // KPIs dinâmicos baseados nos dados reais
-  const financialKPIs: KPIData[] = [
+  const isLoading = loadingFinancial || loadingServices;
+  const error = errorFinancial || errorServices;
+
+  // Hooks para cálculos de KPI
+  const inadimplenciaStatus = useKPIStatus(
+    financialData?.inadimplencia ?? null,
+    financialData?.inadimplenciaTarget ?? null,
+    'financial'
+  );
+  const inadimplenciaTrend = useKPITrend(
+    financialData?.inadimplencia ?? null,
+    financialData?.inadimplenciaTarget ?? null
+  );
+
+  const pontualidadeStatus = useKPIStatus(
+    financialData?.pontualidade ?? null,
+    financialData?.pontualidadeTarget ?? null,
+    'financial'
+  );
+  const pontualidadeTrend = useKPITrend(
+    financialData?.pontualidade ?? null,
+    (financialData?.pontualidadeTarget ?? 0) * 0.9
+  );
+
+  const ebitdaStatus = useKPIStatus(
+    financialData?.ebitda ?? null,
+    financialData?.ebitdaTarget ?? null,
+    'financial'
+  );
+  const ebitdaTrend = useKPITrend(
+    financialData?.ebitda ?? null,
+    (financialData?.ebitdaTarget ?? 0) * 0.8
+  );
+
+  const margemLiquidaStatus = useKPIStatus(
+    financialData?.margemLiquida ?? null,
+    financialData?.margemLiquidaTarget ?? null,
+    'financial'
+  );
+  const margemLiquidaTrend = useKPITrend(
+    financialData?.margemLiquida ?? null,
+    (financialData?.margemLiquidaTarget ?? 0) * 0.8
+  );
+
+  const margemContribuicaoStatus = useKPIStatus(
+    financialData?.margemContribuicao ?? null,
+    financialData?.margemContribuicaoTarget ?? null,
+    'financial'
+  );
+  const margemContribuicaoTrend = useKPITrend(
+    financialData?.margemContribuicao ?? null,
+    (financialData?.margemContribuicaoTarget ?? 0) * 0.9
+  );
+
+  const crescimentoReceita = financialData?.faturamentoTotal?.realized2025 ?? 0 > 0
+    ? Math.round(((financialData!.faturamentoTotal!.target2026 - financialData!.faturamentoTotal!.realized2025) / financialData!.faturamentoTotal!.realized2025) * 10000) / 100
+    : 0;
+
+  const financialKPIs: KPIData[] = !financialData ? [] : [
     {
       id: 'inadimplencia',
       label: 'Inadimplência',
       value: financialData.inadimplencia,
       target: financialData.inadimplenciaTarget,
       unit: '%',
-      status: financialData.inadimplencia > financialData.inadimplenciaTarget ? 'danger' as StatusType : 'success' as StatusType,
-      trend: 'down' as TrendType,
-      trendValue: `-${(financialData.inadimplencia - financialData.inadimplenciaTarget).toFixed(1)}pp`,
+      status: inadimplenciaStatus,
+      trend: inadimplenciaTrend.trend,
+      trendValue: inadimplenciaTrend.formatted,
       responsible: 'Karla',
       description: 'KR1: Reduzir para < 6%',
     },
@@ -37,9 +86,9 @@ export function FinancialView() {
       value: financialData.pontualidade,
       target: financialData.pontualidadeTarget,
       unit: '%',
-      status: financialData.pontualidade >= financialData.pontualidadeTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `+${(financialData.pontualidadeTarget - financialData.pontualidade).toFixed(0)}pp`,
+      status: pontualidadeStatus,
+      trend: pontualidadeTrend.trend,
+      trendValue: pontualidadeTrend.formatted,
       responsible: 'Karla',
       description: 'KR2: Atingir 90%',
     },
@@ -49,9 +98,9 @@ export function FinancialView() {
       value: financialData.ebitda,
       target: financialData.ebitdaTarget,
       unit: '%',
-      status: financialData.ebitda >= financialData.ebitdaTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `+${(financialData.ebitdaTarget - financialData.ebitda).toFixed(1)}pp`,
+      status: ebitdaStatus,
+      trend: ebitdaTrend.trend,
+      trendValue: ebitdaTrend.formatted,
       responsible: 'Karla',
       description: 'KR3: Atingir 10%',
     },
@@ -61,9 +110,9 @@ export function FinancialView() {
       value: financialData.margemLiquida,
       target: financialData.margemLiquidaTarget,
       unit: '%',
-      status: financialData.margemLiquida >= financialData.margemLiquidaTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `+${(financialData.margemLiquidaTarget - financialData.margemLiquida).toFixed(1)}pp`,
+      status: margemLiquidaStatus,
+      trend: margemLiquidaTrend.trend,
+      trendValue: margemLiquidaTrend.formatted,
       responsible: 'Karla',
       description: 'KR4: Atingir 10%',
     },
@@ -73,44 +122,52 @@ export function FinancialView() {
       value: financialData.margemContribuicao,
       target: financialData.margemContribuicaoTarget,
       unit: '%',
-      status: financialData.margemContribuicao >= financialData.margemContribuicaoTarget * 0.9 ? 'success' as StatusType : 'warning' as StatusType,
-      trend: 'up' as TrendType,
-      trendValue: `+${(financialData.margemContribuicaoTarget - financialData.margemContribuicao).toFixed(0)}pp`,
+      status: margemContribuicaoStatus,
+      trend: margemContribuicaoTrend.trend,
+      trendValue: margemContribuicaoTrend.formatted,
       responsible: 'Karla',
       description: 'KR5: Atingir 55%',
     },
     {
       id: 'crescimento-receita',
       label: 'Crescimento Receita',
-      value: financialData.faturamentoTotal.realized2025 > 0 
-        ? Math.round(((financialData.faturamentoTotal.target2026 - financialData.faturamentoTotal.realized2025) / financialData.faturamentoTotal.realized2025) * 10000) / 100
-        : 0,
+      value: crescimentoReceita,
       target: 12,
       unit: '%',
       status: 'warning' as StatusType,
-      trend: 'stable' as TrendType,
+      trend: 'stable',
       trendValue: 'Meta 2026',
       description: 'KR6: Crescer 12% vs 2025',
     },
   ];
 
-  // Receita por serviço baseado nos dados reais
   const revenueByService = servicesData
-    .filter(s => s.revenueTarget > 0)
-    .sort((a, b) => b.revenueTarget - a.revenueTarget)
-    .slice(0, 7)
-    .map(service => ({
-      name: service.name.length > 12 ? service.name.substring(0, 10) + '...' : service.name,
-      fullName: service.name,
-      value: service.revenue,
-      target: service.revenueTarget,
-    }));
+    ? servicesData
+        .filter(s => s.revenueTarget > 0)
+        .sort((a, b) => b.revenueTarget - a.revenueTarget)
+        .slice(0, 7)
+        .map(service => ({
+          name: service.name.length > 12 ? service.name.substring(0, 10) + '...' : service.name,
+          fullName: service.name,
+          value: service.revenue,
+          target: service.revenueTarget,
+        }))
+    : [];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground">Carregando dados financeiros...</span>
+      </div>
+    );
+  }
+
+  if (error || !financialData) {
+    return (
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+        <p className="font-medium">Erro ao carregar dados financeiros</p>
+        <p className="text-sm mt-1">{error?.message || 'Dados não disponíveis'}</p>
       </div>
     );
   }
@@ -237,15 +294,6 @@ export function FinancialView() {
         </div>
       </div>
 
-      {/* OKRs */}
-      <div>
-        <h3 className="font-display font-semibold text-lg mb-4">OKRs - Perspectiva Financeira</h3>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {financialOKRs.map((okr, index) => (
-            <OKRCard key={okr.id} data={okr} delay={index * 100} />
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

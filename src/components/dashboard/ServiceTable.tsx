@@ -1,7 +1,6 @@
 import { ChevronRight, TrendingUp } from 'lucide-react';
-import type { ServiceData, StatusType } from '@/data/dashboardData';
-import { formatCurrency } from '@/data/dashboardData';
-import { formatNumber } from '@/data/utils';
+import type { ServiceData, StatusType } from '@/domain/types/common';
+import { formatCurrency, formatNumber } from '@/shared/utils/parsing';
 
 interface ServiceTableProps {
   services: ServiceData[];

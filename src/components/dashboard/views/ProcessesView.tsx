@@ -1,8 +1,5 @@
-import { CheckCircle2, Circle, Clock, Settings, GitBranch, Database, Zap } from 'lucide-react';
-import { strategicProjects } from '@/data/dashboardData';
-import { useDashboard } from '@/contexts/DashboardContext';
-import { Loader2 } from 'lucide-react';
-import type { StatusType } from '@/data/dashboardData';
+import { CheckCircle2, Circle, Clock, Settings, GitBranch, Database, Zap, Loader2 } from 'lucide-react';
+import { useProcesses, useKPIStatus } from '@/presentation/hooks';
 
 const automationActions = [
   { name: 'Integração Frente de Caixa', status: 'pending' },
@@ -15,26 +12,42 @@ const automationActions = [
 ];
 
 export function ProcessesView() {
-  const { processes, isLoading } = useDashboard();
+  const { data: processes, isLoading, error } = useProcesses();
 
-  // Métricas dinâmicas de processos
-  const processMetrics = [
-    { key: 'processosMapeados', label: 'Processos Mapeados', value: processes.processosMapeados, target: processes.processosMapeadosTarget, unit: '%' },
-    { key: 'processosComDono', label: 'Processos com Dono', value: processes.processosComDono, target: processes.processosComDonoTarget, unit: '%' },
-    { key: 'reducaoRetrabalho', label: 'Redução Retrabalho', value: processes.reducaoRetrabalho, target: processes.reducaoRetrabalhoTarget, unit: '%' },
-    { key: 'tempoFaturamento', label: 'Tempo Faturamento', value: processes.tempoMedioFaturamento, target: processes.tempoMedioFaturamentoTarget, unit: 'dias', inverse: true },
+  const processosStatus = useKPIStatus(
+    processes?.processosMapeados ?? null,
+    processes?.processosMapeadosTarget ?? null,
+    'processes'
+  );
+
+  const donoStatus = useKPIStatus(
+    processes?.processosComDono ?? null,
+    processes?.processosComDonoTarget ?? null,
+    'processes'
+  );
+
+  const retrabalhoStatus = useKPIStatus(
+    processes?.reducaoRetrabalho ?? null,
+    processes?.reducaoRetrabalhoTarget ?? null,
+    'processes'
+  );
+
+  const tempoStatus = useKPIStatus(
+    processes?.tempoMedioFaturamento ?? null,
+    processes?.tempoMedioFaturamentoTarget ?? null,
+    'processes'
+  );
+
+  const processMetrics = !processes ? [] : [
+    { key: 'processosMapeados', label: 'Processos Mapeados', value: processes.processosMapeados, target: processes.processosMapeadosTarget, unit: '%', status: processosStatus },
+    { key: 'processosComDono', label: 'Processos com Dono', value: processes.processosComDono, target: processes.processosComDonoTarget, unit: '%', status: donoStatus },
+    { key: 'reducaoRetrabalho', label: 'Redução Retrabalho', value: processes.reducaoRetrabalho, target: processes.reducaoRetrabalhoTarget, unit: '%', status: retrabalhoStatus },
+    { key: 'tempoFaturamento', label: 'Tempo Faturamento', value: processes.tempoMedioFaturamento, target: processes.tempoMedioFaturamentoTarget, unit: 'dias', inverse: true, status: tempoStatus },
   ];
 
-  // KRs dinâmicos
-  const processKRs = [
-    { id: 'kr57', desc: 'Definir donos para 100% dos processos críticos', target: `${processes.processosComDonoTarget}%`, current: `${processes.processosComDono}%`, status: processes.processosComDono >= processes.processosComDonoTarget * 0.6 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr58', desc: 'Estabelecer rotina de revisão trimestral', target: '4 revisões', current: `${Math.floor(processes.processosMapeados / 25)}`, status: processes.processosMapeados >= 50 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr59', desc: 'Mapear 100% dos processos-chave', target: `${processes.processosMapeadosTarget}%`, current: `${processes.processosMapeados}%`, status: processes.processosMapeados >= processes.processosMapeadosTarget * 0.5 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr60', desc: 'Reduzir retrabalho em 20%', target: `-${processes.reducaoRetrabalhoTarget}%`, current: `-${processes.reducaoRetrabalho}%`, status: processes.reducaoRetrabalho >= processes.reducaoRetrabalhoTarget * 0.4 ? 'warning' as StatusType : 'danger' as StatusType },
-  ];
-
-  // Calcular progresso de automações
-  const automationProgress = (processes.automacoesImplementadas / processes.automacoesImplementadasTarget) * automationActions.length;
+  const automationProgress = processes
+    ? (processes.automacoesImplementadas / processes.automacoesImplementadasTarget) * automationActions.length
+    : 0;
   const completedAutomations = Math.floor(automationProgress);
 
   if (isLoading) {
@@ -42,6 +55,15 @@ export function ProcessesView() {
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground">Carregando dados de processos...</span>
+      </div>
+    );
+  }
+
+  if (error || !processes) {
+    return (
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+        <p className="font-medium">Erro ao carregar dados de processos</p>
+        <p className="text-sm mt-1">{error?.message || 'Dados não disponíveis'}</p>
       </div>
     );
   }
@@ -57,15 +79,14 @@ export function ProcessesView() {
       {/* Process KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {processMetrics.map((metric, index) => {
-          const progress = metric.inverse 
-            ? (metric.target / metric.value) * 100 
+          const progress = metric.inverse
+            ? (metric.target / metric.value) * 100
             : (metric.value / metric.target) * 100;
-          const status = progress >= 90 ? 'success' : progress >= 50 ? 'warning' : 'danger';
-          
+
           return (
-            <div 
+            <div
               key={metric.key}
-              className={`kpi-card status-${status} animate-fade-in`}
+              className={`kpi-card status-${metric.status} animate-fade-in`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center justify-between mb-2">
@@ -78,8 +99,8 @@ export function ProcessesView() {
                 Meta: {metric.inverse ? '≤' : ''}{metric.target}{metric.unit === '%' ? '%' : ` ${metric.unit}`}
               </p>
               <div className="progress-bar mt-2">
-                <div 
-                  className={`progress-bar-fill ${status}`}
+                <div
+                  className={`progress-bar-fill ${metric.status}`}
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
@@ -88,43 +109,10 @@ export function ProcessesView() {
         })}
       </div>
 
-      {/* Strategic Projects & Automation */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Strategic Projects */}
-        <div className="dashboard-card p-6 animate-fade-in">
-          <div className="flex items-center gap-2 mb-4">
-            <Settings className="w-5 h-5 text-primary" />
-            <h3 className="font-display font-semibold text-lg">Projetos Estratégicos</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {strategicProjects.map((project) => (
-              <div key={project.id} className="p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {project.id === 'sap' && <Database className="w-4 h-4 text-primary" />}
-                    {project.id === 'crm' && <GitBranch className="w-4 h-4 text-primary" />}
-                    {project.id === 'bi' && <Zap className="w-4 h-4 text-primary" />}
-                    {project.id === 'automacao' && <Settings className="w-4 h-4 text-primary" />}
-                    <span className="font-medium">{project.name}</span>
-                  </div>
-                  <span className={`status-badge ${project.status}`}>
-                    {project.progress}%
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className={`progress-bar-fill ${project.status}`}
-                    style={{ width: `${project.progress}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      {/* Automation */}
+      <div>
         {/* Automation Checklist */}
-        <div className="dashboard-card p-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="dashboard-card p-6 animate-fade-in">
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-5 h-5 text-secondary" />
             <h3 className="font-display font-semibold text-lg">Ações de Automação (F3)</h3>
@@ -159,35 +147,12 @@ export function ProcessesView() {
               <span className="font-semibold">{processes.automacoesImplementadas} / {processes.automacoesImplementadasTarget} ações</span>
             </div>
             <div className="progress-bar mt-2">
-              <div 
-                className={`progress-bar-fill ${processes.automacoesImplementadas >= processes.automacoesImplementadasTarget * 0.6 ? 'warning' : 'danger'}`} 
-                style={{ width: `${(processes.automacoesImplementadas / processes.automacoesImplementadasTarget) * 100}%` }} 
+              <div
+                className={`progress-bar-fill ${processes.automacoesImplementadas >= processes.automacoesImplementadasTarget * 0.6 ? 'warning' : 'danger'}`}
+                style={{ width: `${(processes.automacoesImplementadas / processes.automacoesImplementadasTarget) * 100}%` }}
               />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Process Key Results */}
-      <div className="dashboard-card p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-4">Key Results - Processos Internos</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {processKRs.map((kr) => (
-            <div key={kr.id} className="p-4 bg-muted/30 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-muted-foreground uppercase">{kr.id}</span>
-                <span className={`status-badge ${kr.status}`}>
-                  {kr.status === 'success' ? 'No alvo' : kr.status === 'warning' ? 'Atenção' : 'Crítico'}
-                </span>
-              </div>
-              <p className="text-sm font-medium mb-2">{kr.desc}</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Atual: {kr.current}</span>
-                <span className="font-semibold">Meta: {kr.target}</span>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

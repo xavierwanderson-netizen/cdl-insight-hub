@@ -2,125 +2,149 @@ import { KPICard } from '../KPICard';
 import { ServiceTable } from '../ServiceTable';
 import { RevenueChart } from '../RevenueChart';
 import { FunnelChart } from '../FunnelChart';
-import { useFinancialData, useRevenueEvolution, useServicesData, useCaptacaoData } from '@/hooks/useDashboardData';
-import { formatCurrency } from '@/data/dashboardData';
 import { AlertTriangle, TrendingUp, Target, Users, DollarSign, BarChart3, Loader2 } from 'lucide-react';
-import type { KPIData, StatusType, TrendType } from '@/data/dashboardData';
+import { useFinancial, useRevenueEvolution, useServices, useCaptacao, useKPIStatus, useKPITrend } from '@/presentation/hooks';
+import { formatCurrency } from '@/shared/utils/parsing';
+import type { KPIData, StatusType } from '@/domain/types/common';
 import type { FunnelStage } from '@/data/types';
-import { useDashboard } from '@/contexts/DashboardContext';
 
 export function OverviewView() {
-  // Obter filtros do contexto
-  const { year, month } = useDashboard();
-  
-  // Buscar dados reais das planilhas usando os filtros
-  const { data: financialData, isLoading: loadingFinancial } = useFinancialData();
+  const { data: financialData, isLoading: loadingFinancial, error: errorFinancial } = useFinancial();
   const { data: revenueData, isLoading: loadingRevenue } = useRevenueEvolution();
-  const { data: servicesData, isLoading: loadingServices } = useServicesData(year);
-  const { data: captacaoData, isLoading: loadingCaptacao } = useCaptacaoData(year);
+  const { data: servicesData, isLoading: loadingServices } = useServices('2026');
+  const { data: captacaoData, isLoading: loadingCaptacao } = useCaptacao();
 
   const isLoading = loadingFinancial || loadingRevenue || loadingServices || loadingCaptacao;
+  const error = errorFinancial;
 
-  // Calcular valores reais
-  const totalRevenueMeta = financialData.faturamentoTotal.target2026;
-  const totalRevenueRealized = financialData.faturamentoTotal.realized2026;
-  const totalRevenue2025 = financialData.faturamentoTotal.realized2025;
+  const inadimplenciaStatus = useKPIStatus(
+    financialData?.inadimplencia ?? null,
+    financialData?.inadimplenciaTarget ?? null,
+    'financial'
+  );
+  const inadimplenciaTrend = useKPITrend(
+    financialData?.inadimplencia ?? null,
+    financialData?.inadimplenciaTarget ?? null
+  );
+
+  const ebitdaStatus = useKPIStatus(
+    financialData?.ebitda ?? null,
+    financialData?.ebitdaTarget ?? null,
+    'financial'
+  );
+
+  const margemStatus = useKPIStatus(
+    financialData?.margemLiquida ?? null,
+    financialData?.margemLiquidaTarget ?? null,
+    'financial'
+  );
+
+  const totalRevenueMeta = financialData?.faturamentoTotal?.target2026 ?? 0;
+  const totalRevenueRealized = financialData?.faturamentoTotal?.realized2026 ?? 0;
+  const totalRevenue2025 = financialData?.faturamentoTotal?.realized2025 ?? 0;
   const revenueProgress = totalRevenueMeta > 0 ? (totalRevenueRealized / totalRevenueMeta) * 100 : 0;
   const growthVs2025 = totalRevenue2025 > 0 ? ((totalRevenueMeta - totalRevenue2025) / totalRevenue2025) * 100 : 0;
 
-  // KPIs dinâmicos baseados nos dados reais
-  const executiveKPIs: KPIData[] = [
-    { 
-      id: 'faturamento-total', 
-      label: 'Faturamento 2025', 
-      value: financialData.faturamentoTotal.realized2025, 
-      target: financialData.faturamentoTotal.target2026, 
-      prefix: 'R$', 
-      status: 'warning' as StatusType, 
-      trend: 'up' as TrendType, 
-      trendValue: `+${growthVs2025.toFixed(0)}%` 
+  const executiveKPIs: KPIData[] = !financialData ? [] : [
+    {
+      id: 'faturamento-total',
+      label: 'Faturamento 2025',
+      value: financialData.faturamentoTotal.realized2025,
+      target: financialData.faturamentoTotal.target2026,
+      prefix: 'R$',
+      status: 'warning',
+      trend: 'up',
+      trendValue: `+${growthVs2025.toFixed(0)}%`,
     },
-    { 
-      id: 'servicos-cdl', 
-      label: 'Serviços CDL', 
-      value: financialData.servicosCDL.realized2025, 
-      target: financialData.servicosCDL.target2026, 
-      prefix: 'R$', 
-      status: 'warning' as StatusType, 
-      trend: 'up' as TrendType, 
-      trendValue: '+16.7%' 
+    {
+      id: 'servicos-cdl',
+      label: 'Serviços CDL',
+      value: financialData.servicosCDL.realized2025,
+      target: financialData.servicosCDL.target2026,
+      prefix: 'R$',
+      status: 'warning',
+      trend: 'up',
+      trendValue: '+16.7%',
     },
-    { 
-      id: 'spc-brasil', 
-      label: 'SPC Brasil', 
-      value: financialData.spcBrasil.realized2025, 
-      target: financialData.spcBrasil.target2026, 
-      prefix: 'R$', 
-      status: 'warning' as StatusType, 
-      trend: 'up' as TrendType, 
-      trendValue: '+9.7%' 
+    {
+      id: 'spc-brasil',
+      label: 'SPC Brasil',
+      value: financialData.spcBrasil.realized2025,
+      target: financialData.spcBrasil.target2026,
+      prefix: 'R$',
+      status: 'warning',
+      trend: 'up',
+      trendValue: '+9.7%',
     },
-    { 
-      id: 'inadimplencia', 
-      label: 'Inadimplência', 
-      value: financialData.inadimplencia, 
-      target: financialData.inadimplenciaTarget, 
-      unit: '%', 
-      status: financialData.inadimplencia > financialData.inadimplenciaTarget ? 'danger' as StatusType : 'success' as StatusType, 
-      trend: 'down' as TrendType, 
-      trendValue: `Meta <${financialData.inadimplenciaTarget}%`, 
-      responsible: 'Karla' 
+    {
+      id: 'inadimplencia',
+      label: 'Inadimplência',
+      value: financialData.inadimplencia,
+      target: financialData.inadimplenciaTarget,
+      unit: '%',
+      status: inadimplenciaStatus,
+      trend: inadimplenciaTrend.trend,
+      trendValue: inadimplenciaTrend.formatted,
+      responsible: 'Karla',
     },
-    { 
-      id: 'ebitda', 
-      label: 'EBITDA', 
-      value: financialData.ebitda, 
-      target: financialData.ebitdaTarget, 
-      unit: '%', 
-      status: 'warning' as StatusType, 
-      trend: 'up' as TrendType, 
-      trendValue: '+2pp' 
+    {
+      id: 'ebitda',
+      label: 'EBITDA',
+      value: financialData.ebitda,
+      target: financialData.ebitdaTarget,
+      unit: '%',
+      status: ebitdaStatus,
+      trend: 'up',
+      trendValue: '+2pp',
     },
-    { 
-      id: 'margem-liquida', 
-      label: 'Margem Líquida', 
-      value: financialData.margemLiquida, 
-      target: financialData.margemLiquidaTarget, 
-      unit: '%', 
-      status: 'warning' as StatusType, 
-      trend: 'up' as TrendType, 
-      trendValue: '+1.5pp' 
+    {
+      id: 'margem-liquida',
+      label: 'Margem Líquida',
+      value: financialData.margemLiquida,
+      target: financialData.margemLiquidaTarget,
+      unit: '%',
+      status: margemStatus,
+      trend: 'up',
+      trendValue: '+1.5pp',
     },
   ];
 
-  // Funil de vendas dinâmico baseado nos dados de captação
-  const salesFunnel: FunnelStage[] = [
+  const salesFunnel: FunnelStage[] = !captacaoData ? [] : [
     { id: 'leads', name: 'Leads', value: captacaoData.leads, target: captacaoData.leadsTarget, percentage: 100, color: 'hsl(222, 65%, 35%)' },
     { id: 'qualificados', name: 'Qualificados', value: captacaoData.leadsQualificados, target: captacaoData.leadsQualificadosTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.leadsQualificados / captacaoData.leadsTarget) * 100 : 0, color: 'hsl(38, 92%, 50%)' },
     { id: 'propostas', name: 'Propostas', value: captacaoData.propostas, target: captacaoData.propostasTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.propostas / captacaoData.leadsTarget) * 100 : 0, color: 'hsl(142, 71%, 45%)' },
     { id: 'novos', name: 'Novos Associados', value: captacaoData.novosAssociados, target: captacaoData.novosAssociadosTarget, percentage: captacaoData.leadsTarget > 0 ? (captacaoData.novosAssociados / captacaoData.leadsTarget) * 100 : 0, color: 'hsl(262, 80%, 55%)' },
   ];
 
-  // Projetos estratégicos
   const strategicProjects = [
     { id: 'sap', name: 'Otimização SAP', progress: 35, status: 'warning' as StatusType },
     { id: 'crm', name: 'CRM Bitrix', progress: 60, status: 'warning' as StatusType },
     { id: 'bi', name: 'BI Executivo', progress: 20, status: 'danger' as StatusType },
   ];
 
-  // Converter revenueData para formato do gráfico - usar nomes corretos
-  const revenueEvolutionChart = revenueData.map(item => ({
-    month: item.shortMonth,
-    realized2025: item.realized2025,
-    target2026: item.target2026,
-    realized2026: item.realized2026,
-  }));
+  const revenueEvolutionChart = revenueData
+    ? revenueData.map(item => ({
+        month: item.shortMonth,
+        realized2025: item.realized2025,
+        target2026: item.target2026,
+        realized2026: item.realized2026,
+      }))
+    : [];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground">Carregando dados...</span>
+      </div>
+    );
+  }
+
+  if (error || !financialData || !captacaoData || !servicesData) {
+    return (
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+        <p className="font-medium">Erro ao carregar dados</p>
+        <p className="text-sm mt-1">{error?.message || 'Dados não disponíveis'}</p>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from 'recharts';
-import { formatCurrency, type RevenueEvolutionData } from '@/data/dashboardData';
+import { formatCurrency } from '@/shared/utils/parsing';
+import type { RevenueEvolutionData } from '@/domain/types/common';
 
 interface RevenueChartProps {
   data: RevenueEvolutionData[];

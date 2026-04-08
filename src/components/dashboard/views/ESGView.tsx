@@ -1,19 +1,35 @@
-import { Leaf, Recycle, Heart, FileCheck, Target } from 'lucide-react';
-import { useDashboard } from '@/contexts/DashboardContext';
-import { Loader2 } from 'lucide-react';
+import { Leaf, Recycle, Heart, FileCheck, Target, Loader2 } from 'lucide-react';
+import { useESG, useKPIStatus } from '@/presentation/hooks';
 
 export function ESGView() {
-  const { esg, isLoading } = useDashboard();
+  const { data: esg, isLoading, error } = useESG();
 
-  // Iniciativas ESG dinâmicas
-  const esgInitiatives = [
+  const lixoStatus = useKPIStatus(
+    esg?.lixoEletronico ?? null,
+    esg?.lixoEletronicoTarget ?? null,
+    'esg'
+  );
+
+  const acoesStatus = useKPIStatus(
+    esg?.acoesSociais ?? null,
+    esg?.acoesSociaisTarget ?? null,
+    'esg'
+  );
+
+  const projetosStatus = useKPIStatus(
+    esg?.projetosESG ?? null,
+    esg?.projetosESGTarget ?? null,
+    'esg'
+  );
+
+  const esgInitiatives = !esg ? [] : [
     {
       title: 'Coleta de Lixo Eletrônico',
       description: 'Programa de coleta e descarte responsável de equipamentos eletrônicos',
       target: `${esg.lixoEletronicoTarget} toneladas/ano`,
       current: `${esg.lixoEletronico} toneladas`,
       progress: (esg.lixoEletronico / esg.lixoEletronicoTarget) * 100,
-      status: esg.lixoEletronico >= esg.lixoEletronicoTarget * 0.5 ? 'warning' : 'danger',
+      status: lixoStatus,
       icon: Recycle,
     },
     {
@@ -22,7 +38,7 @@ export function ESGView() {
       target: `${esg.acoesSociaisTarget} ações/ano`,
       current: `${esg.acoesSociais} ações`,
       progress: (esg.acoesSociais / esg.acoesSociaisTarget) * 100,
-      status: esg.acoesSociais >= esg.acoesSociaisTarget * 0.5 ? 'warning' : 'danger',
+      status: acoesStatus,
       icon: Heart,
     },
     {
@@ -31,7 +47,7 @@ export function ESGView() {
       target: `${esg.projetosESGTarget} projetos`,
       current: `${esg.projetosESG} projetos`,
       progress: (esg.projetosESG / esg.projetosESGTarget) * 100,
-      status: esg.projetosESG >= esg.projetosESGTarget * 0.6 ? 'warning' : 'danger',
+      status: projetosStatus,
       icon: Leaf,
     },
     {
@@ -45,20 +61,29 @@ export function ESGView() {
     },
   ];
 
-  const sustainabilityGoals = [
+  const sustainabilityGoals = !esg ? [] : [
     { name: 'Redução consumo papel', target: '-30%', current: `${Math.round((esg.projetosESG / esg.projetosESGTarget) * 30)}%`, progress: (esg.projetosESG / esg.projetosESGTarget) * 100, icon: '📄' },
     { name: 'Práticas sustentáveis', target: '5 ações', current: `${esg.projetosESG}`, progress: (esg.projetosESG / 5) * 100, icon: '🌱' },
     { name: 'Revisão fornecedores', target: '100%', current: `${Math.round((esg.acoesSociais / esg.acoesSociaisTarget) * 100)}%`, progress: (esg.acoesSociais / esg.acoesSociaisTarget) * 100, icon: '🤝' },
     { name: 'Gestão de resíduos', target: '100%', current: `${Math.round((esg.lixoEletronico / esg.lixoEletronicoTarget) * 100)}%`, progress: (esg.lixoEletronico / esg.lixoEletronicoTarget) * 100, icon: '♻️' },
   ];
 
-  const policyProgress = esg.politicaESG === 'implemented' ? 100 : esg.politicaESG === 'in_progress' ? 50 : 0;
+  const policyProgress = !esg ? 0 : esg.politicaESG === 'implemented' ? 100 : esg.politicaESG === 'in_progress' ? 50 : 0;
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground">Carregando dados ESG...</span>
+      </div>
+    );
+  }
+
+  if (error || !esg) {
+    return (
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+        <p className="font-medium">Erro ao carregar dados ESG</p>
+        <p className="text-sm mt-1">{error?.message || 'Dados não disponíveis'}</p>
       </div>
     );
   }

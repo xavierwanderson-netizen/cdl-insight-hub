@@ -1,7 +1,6 @@
-import { Users, GraduationCap, Heart, MessageSquare, Target, Award } from 'lucide-react';
-import { useDashboard } from '@/contexts/DashboardContext';
-import { Loader2 } from 'lucide-react';
-import type { StatusType } from '@/data/dashboardData';
+import { Users, GraduationCap, Heart, MessageSquare, Target, Award, Loader2 } from 'lucide-react';
+import { usePeople, useKPIStatus } from '@/presentation/hooks';
+import type { StatusType } from '@/domain/types/common';
 
 const initiativeCards = [
   {
@@ -31,27 +30,52 @@ const initiativeCards = [
 ];
 
 export function PeopleView() {
-  const { people, isLoading } = useDashboard();
+  const { data: people, isLoading, error } = usePeople();
 
-  // KPIs dinâmicos baseados nos dados reais
-  const peopleMetrics = [
-    { key: 'colaboradoresTreinados', label: 'Colaboradores Treinados', value: people.colaboradoresTreinados, target: people.colaboradoresTreinadosTarget, unit: '%', icon: GraduationCap },
-    { key: 'lideresCapacitados', label: 'Líderes Capacitados', value: people.lideresCapacitados, target: people.lideresCapacitadosTarget, unit: '%', icon: Award },
-    { key: 'satisfacaoTreinamentos', label: 'Satisfação Treinamentos', value: people.satisfacaoTreinamentos, target: people.satisfacaoTreinamentosTarget, unit: '%', icon: Heart },
-    { key: 'reunioesLideranca', label: 'Reuniões Liderança', value: people.reunioesLideranca, target: people.reunioesLiderancaTarget, unit: '/ano', icon: MessageSquare },
-    { key: 'pulsoClima', label: 'Pulso Clima', value: people.pulsoClima, target: people.pulsoClimaTarget, unit: '%', icon: Users },
-    { key: 'discAplicado', label: 'DISC Aplicado', value: people.discAplicado, target: people.discAplicadoTarget, unit: '%', icon: Target },
-  ];
+  // Hooks para cálculos de status
+  const colaboradoresStatus = useKPIStatus(
+    people?.colaboradoresTreinados ?? null,
+    people?.colaboradoresTreinadosTarget ?? null,
+    'people'
+  );
 
-  // KRs dinâmicos
-  const peopleKRs = [
-    { id: 'kr63', desc: '80% dos treinamentos com ação prática aplicada', target: `${people.colaboradoresTreinadosTarget}%`, current: `${people.colaboradoresTreinados}%`, status: people.colaboradoresTreinados >= people.colaboradoresTreinadosTarget * 0.5 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr64', desc: '85% de satisfação da equipe com treinamentos', target: `${people.satisfacaoTreinamentosTarget}%`, current: `${people.satisfacaoTreinamentos}%`, status: people.satisfacaoTreinamentos >= people.satisfacaoTreinamentosTarget * 0.9 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr65', desc: '80% dos colaboradores treinados', target: `${people.colaboradoresTreinadosTarget}%`, current: `${people.colaboradoresTreinados}%`, status: people.colaboradoresTreinados >= people.colaboradoresTreinadosTarget * 0.8 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr66', desc: '100% dos líderes capacitados na Trilha', target: `${people.lideresCapacitadosTarget}%`, current: `${people.lideresCapacitados}%`, status: people.lideresCapacitados >= people.lideresCapacitadosTarget * 0.7 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr67', desc: 'Reunião de área mensal em 100% das áreas', target: `${people.reunioesLiderancaTarget}`, current: `${people.reunioesLideranca}`, status: people.reunioesLideranca >= people.reunioesLiderancaTarget * 0.6 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr70', desc: 'Aplicar DISC em 100% dos líderes', target: `${people.discAplicadoTarget}%`, current: `${people.discAplicado}%`, status: people.discAplicado >= people.discAplicadoTarget * 0.3 ? 'warning' as StatusType : 'danger' as StatusType },
-    { id: 'kr72', desc: 'Aplicar 4 pesquisas pulso no ano', target: '4', current: `${Math.floor(people.pulsoClima / 25)}`, status: people.pulsoClima >= 50 ? 'warning' as StatusType : 'danger' as StatusType },
+  const lideresStatus = useKPIStatus(
+    people?.lideresCapacitados ?? null,
+    people?.lideresCapacitadosTarget ?? null,
+    'people'
+  );
+
+  const satisfacaoStatus = useKPIStatus(
+    people?.satisfacaoTreinamentos ?? null,
+    people?.satisfacaoTreinamentosTarget ?? null,
+    'people'
+  );
+
+  const reunioesStatus = useKPIStatus(
+    people?.reunioesLideranca ?? null,
+    people?.reunioesLiderancaTarget ?? null,
+    'people'
+  );
+
+  const pulsoStatus = useKPIStatus(
+    people?.pulsoClima ?? null,
+    people?.pulsoClimaTarget ?? null,
+    'people'
+  );
+
+  const discStatus = useKPIStatus(
+    people?.discAplicado ?? null,
+    people?.discAplicadoTarget ?? null,
+    'people'
+  );
+
+  const peopleMetrics = !people ? [] : [
+    { key: 'colaboradoresTreinados', label: 'Colaboradores Treinados', value: people.colaboradoresTreinados, target: people.colaboradoresTreinadosTarget, unit: '%', icon: GraduationCap, status: colaboradoresStatus },
+    { key: 'lideresCapacitados', label: 'Líderes Capacitados', value: people.lideresCapacitados, target: people.lideresCapacitadosTarget, unit: '%', icon: Award, status: lideresStatus },
+    { key: 'satisfacaoTreinamentos', label: 'Satisfação Treinamentos', value: people.satisfacaoTreinamentos, target: people.satisfacaoTreinamentosTarget, unit: '%', icon: Heart, status: satisfacaoStatus },
+    { key: 'reunioesLideranca', label: 'Reuniões Liderança', value: people.reunioesLideranca, target: people.reunioesLiderancaTarget, unit: '/ano', icon: MessageSquare, status: reunioesStatus },
+    { key: 'pulsoClima', label: 'Pulso Clima', value: people.pulsoClima, target: people.pulsoClimaTarget, unit: '%', icon: Users, status: pulsoStatus },
+    { key: 'discAplicado', label: 'DISC Aplicado', value: people.discAplicado, target: people.discAplicadoTarget, unit: '%', icon: Target, status: discStatus },
   ];
 
   if (isLoading) {
@@ -59,6 +83,15 @@ export function PeopleView() {
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground">Carregando dados de pessoas...</span>
+      </div>
+    );
+  }
+
+  if (error || !people) {
+    return (
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+        <p className="font-medium">Erro ao carregar dados de pessoas</p>
+        <p className="text-sm mt-1">{error?.message || 'Dados não disponíveis'}</p>
       </div>
     );
   }
@@ -75,15 +108,14 @@ export function PeopleView() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {peopleMetrics.map((metric, index) => {
           const Icon = metric.icon;
-          const progress = metric.unit === '/ano' 
-            ? (metric.value / metric.target) * 100 
+          const progress = metric.unit === '/ano'
+            ? (metric.value / metric.target) * 100
             : (metric.value / metric.target) * 100;
-          const status = progress >= 90 ? 'success' : progress >= 60 ? 'warning' : 'danger';
-          
+
           return (
-            <div 
+            <div
               key={metric.key}
-              className={`kpi-card status-${status} animate-fade-in`}
+              className={`kpi-card status-${metric.status} animate-fade-in`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -97,8 +129,8 @@ export function PeopleView() {
                 Meta: {metric.target}{metric.unit}
               </p>
               <div className="progress-bar mt-2">
-                <div 
-                  className={`progress-bar-fill ${status}`}
+                <div
+                  className={`progress-bar-fill ${metric.status}`}
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
@@ -130,28 +162,6 @@ export function PeopleView() {
         })}
       </div>
 
-      {/* Key Results */}
-      <div className="dashboard-card p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-4">Key Results - Pessoas & Aprendizado</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {peopleKRs.map((kr) => (
-            <div key={kr.id} className="p-4 bg-muted/30 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-muted-foreground uppercase">{kr.id}</span>
-                <span className={`status-badge ${kr.status}`}>
-                  {kr.status === 'success' ? 'No alvo' : kr.status === 'warning' ? 'Atenção' : 'Crítico'}
-                </span>
-              </div>
-              <p className="text-sm font-medium mb-2">{kr.desc}</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Atual: {kr.current}</span>
-                <span className="font-semibold">Meta: {kr.target}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
